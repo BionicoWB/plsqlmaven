@@ -6,27 +6,6 @@
   <packaging>maven-plugin</packaging>
   <version>1.0-SNAPSHOT</version>
   <name>PL/SQL Maven Mojo</name>
-  <description>this plugin aims to reproduce the java development lifecycle with maven for pl/sql developers</description>
-  <url>http://code.google.com/p/plsqlmaven/</url>
-    <licenses>
-	    <license>
-	      <name>The Apache Software License, Version 2.0</name>
-	      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-	      <distribution>repo</distribution>
-	    </license>
-    </licenses>
-    <scm>
-	    <url>http://code.google.com/p/plsqlmaven/source/browse/plsql-maven-plugin/trunk</url>
-        <connection>scm:svn:http://plsqlmaven.googlecode.com/svn/plsql-maven-plugin/trunk</connection>
-        <developerConnection>scm:svn:https://plsqlmaven.googlecode.com/svn/plsql-maven-plugin/trunk</developerConnection>
-    </scm>
-	<developers>
-	    <developer>
-	      <id>agariboldi</id>
-	      <name>Andrea Amerigo Aristodemo Gariboldi</name>
-	      <email>andrea.gariboldi@gmail.com</email>
-	    </developer>
-	</developers>
   <dependencies>
     <dependency>
         <groupId>org.codehaus.groovy.maven</groupId>

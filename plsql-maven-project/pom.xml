@@ -8,28 +8,7 @@
   <packaging>pom</packaging>
 
   <name>PL/SQL parent project</name>
-  <description>a sample archetype that creates a project with a PL/SQL package inside and extends the parent project</description>
-  <url>http://code.google.com/p/plsqlmaven/</url>
-    <licenses>
-            <license>
-              <name>The Apache Software License, Version 2.0</name>
-              <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-              <distribution>repo</distribution>
-            </license>
-    </licenses>
-    <scm>
-            <url>http://code.google.com/p/plsqlmaven/source/browse/plsql-maven-project/trunk</url>
-        <connection>scm:svn:http://plsqlmaven.googlecode.com/svn/plsql-maven-project/trunk</connection>
-        <developerConnection>scm:svn:https://plsqlmaven.googlecode.com/svn/plsql-maven-project/trunk</developerConnection>
-    </scm>
-        <developers>
-            <developer>
-              <id>agariboldi</id>
-              <name>Andrea Amerigo Aristodemo Gariboldi</name>
-              <email>andrea.gariboldi@gmail.com</email>
-            </developer>
-        </developers>
-
+  <description>a parent project to be inherited by PL/SQL maven projects to configure defaults</description>
 
   <build>
     <sourceDirectory>src/main/plsql</sourceDirectory>

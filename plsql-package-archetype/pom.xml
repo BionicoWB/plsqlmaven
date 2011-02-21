@@ -8,25 +8,5 @@
   <packaging>jar</packaging>
   <name>PL/SQL Package Archetype</name>
   <description>a sample archetype that creates a project with a PL/SQL package inside and extends the parent project</description>
-  <url>http://code.google.com/p/plsqlmaven/</url>
-    <licenses>
-            <license>
-              <name>The Apache Software License, Version 2.0</name>
-              <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-              <distribution>repo</distribution>
-            </license>
-    </licenses>
-    <scm>
-            <url>http://code.google.com/p/plsqlmaven/source/browse/plsql-package-archetype/trunk</url>
-        <connection>scm:svn:http://plsqlmaven.googlecode.com/svn/plsql-package-archetype/trunk</connection>
-        <developerConnection>scm:svn:https://plsqlmaven.googlecode.com/svn/plsql-package-archetype/trunk</developerConnection>
-    </scm>
-        <developers>
-            <developer>
-              <id>agariboldi</id>
-              <name>Andrea Amerigo Aristodemo Gariboldi</name>
-              <email>andrea.gariboldi@gmail.com</email>
-            </developer>
-        </developers>
 
 </project>
