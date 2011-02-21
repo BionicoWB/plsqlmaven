@@ -2,9 +2,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+    <parent>            
+            <groupId>com.google.code.plsqlmaven</groupId>
+            <artifactId>plsqlmaven</artifactId>
+            <version>1.0-SNAPSHOT</version>
+    </parent>
+
   <groupId>com.google.code.plsqlmaven</groupId>
   <artifactId>plsql-package-archetype</artifactId>
-  <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>PL/SQL Package Archetype</name>
   <description>a sample archetype that creates a project with a PL/SQL package inside and extends the parent project</description>
