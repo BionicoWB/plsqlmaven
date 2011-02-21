@@ -35,7 +35,6 @@ public abstract class PlSqlMojo
      * Database username. 
      * @since 1.0
      * @parameter expression="${username}"
-     * @required
      */
     private String username;
 
@@ -43,14 +42,12 @@ public abstract class PlSqlMojo
      * Database password.
      * @since 1.0
      * @parameter expression="${password}"
-     * @required
      */
     private String password;
 
     /**
      * Database URL.
      * @parameter expression="${url}"
-     * @required
      * @since 1.0
      */
     private String url;
@@ -70,14 +67,19 @@ public abstract class PlSqlMojo
 
     public void disconnectFromDatabase()
     {
-        if (sql!=null)
+        if (sql)
             sql.close();
     }
 
     public void connectToDatabase()
     {
-        log.debug( "connecting to " + url )
-        sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
+        if (url)
+        {
+            log.debug( "connecting to " + url )
+            sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
+        }
+        else
+            sql= null;
     }
 
     public getSourceDescriptor(File source)

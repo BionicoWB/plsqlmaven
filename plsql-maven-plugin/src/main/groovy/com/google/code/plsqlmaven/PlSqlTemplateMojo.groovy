@@ -46,6 +46,7 @@ public class PlSqlTemplateMojo
 
     void execute()
     {
+        if (sql) // if the user gave us a connection
         try
         {
             connectToDatabase()
