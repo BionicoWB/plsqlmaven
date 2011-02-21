@@ -29,7 +29,7 @@ import groovy.sql.Sql
 public abstract class PlSqlMojo
     extends GroovyMojo
 {
-    public PLSQL_EXTENSION= '.pls';
+    public PLSQL_EXTENSION= '.plsql';
 
     /**
      * Database username. 
