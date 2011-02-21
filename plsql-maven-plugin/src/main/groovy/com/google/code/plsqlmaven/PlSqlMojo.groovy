@@ -71,7 +71,7 @@ public abstract class PlSqlMojo
             sql.close();
     }
 
-    public void connectToDatabase()
+    public boolean connectToDatabase()
     {
         if (url)
         {
@@ -80,6 +80,8 @@ public abstract class PlSqlMojo
         }
         else
             sql= null;
+            
+        return (sql!=null);
     }
 
     public getSourceDescriptor(File source)

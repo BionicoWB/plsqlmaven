@@ -40,7 +40,11 @@ public class PlSqlCompileDependenciesMojo
     {
             def success= false;
             
-            connectToDatabase();
+            if (!connectToDatabase())
+            {
+              fail('Need an Oracle connection')
+              return
+            }
             
             compileDependencyFiles();
             

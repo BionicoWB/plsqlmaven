@@ -72,7 +72,11 @@ public class PlSqlCompileMojo
             sd['changed']= true
             sources << sd
             
-            connectToDatabase();
+            if (!connectToDatabase())
+            {
+              fail('Need an Oracle connection')
+              return
+            }
             
             compileChangedFiles();
             

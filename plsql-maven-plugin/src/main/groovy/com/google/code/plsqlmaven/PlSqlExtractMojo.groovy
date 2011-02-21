@@ -45,7 +45,12 @@ public class PlSqlExtractMojo
     {
         if (checkSourceDirectory())
         {
-            connectToDatabase()
+            if (!connectToDatabase())
+            {
+              fail('Need an Oracle connection')
+              return
+            }
+              
             createSources()
             disconnectFromDatabase()
         }     
