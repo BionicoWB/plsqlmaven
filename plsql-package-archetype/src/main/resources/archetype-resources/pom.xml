@@ -1,0 +1,60 @@
+#set( $symbol_dollar = '$' )
+#set( $upperArtifactId = $artifactId.toUpperCase() )
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+          <groupId>com.google.code.plsqlmaven</groupId>
+          <artifactId>plsql-maven-project</artifactId>
+          <version>1.0-SNAPSHOT</version>
+  </parent>
+
+  <groupId>${groupId}</groupId>
+  <artifactId>${artifactId}</artifactId>
+  <version>${version}</version>
+  <packaging>jar</packaging>
+
+  <name>${artifactId} package</name>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.google.code.plsqlmaven</groupId>
+        <artifactId>plsql-maven-plugin</artifactId>
+        <version>1.0-SNAPSHOT</version>
+      </plugin>
+    </plugins>
+  </build>
+  
+		    <!-- define profiles like this in your ~/.m2/settings.xml
+		         to define connections
+		         
+					<settings>
+					  <profiles>
+					           <profile>
+					             <id>app_dev</id>
+					             <properties>
+					                     <databaseUrl>jdbc:oracle:thin:@dev_server:1521:dev10g</databaseUrl>
+					                     <databaseUser>app</databaseUser>
+					                     <databasePassword>app_pwd</databasePassword>
+					             </properties>
+					           </profile>
+					           <profile>
+					             <id>app_qa</id>
+					             <properties>
+					                     <databaseUrl>jdbc:oracle:thin:@qa_server:1521:qa10g</databaseUrl>
+					                     <databaseUser>app</databaseUser>
+					                     <databasePassword>app_pwd</databasePassword>
+					             </properties>
+					           </profile>
+					  </profiles>
+					</settings>
+		    
+		      so you are able to:
+		      
+		      mvn -Papp_dev compile
+
+		      -->
+
+</project>
