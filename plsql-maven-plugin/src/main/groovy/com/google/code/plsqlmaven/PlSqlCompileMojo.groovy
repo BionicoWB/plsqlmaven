@@ -243,7 +243,6 @@ public class PlSqlCompileMojo
     
     private void getLastCompileTime()
     {
-        // if it doesn't exists lastModified returns 0
         touchFile= new File(project.build.directory,".plsql")
         lastCompileTime= touchFile.lastModified();
         log.debug("touch file: ${touchFile.absolutePath}")

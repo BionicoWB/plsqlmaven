@@ -168,7 +168,6 @@ public class XdbImportMojo
     
     private void getLastImportTime()
     {
-        // if it doesn't exists lastModified returns 0
         touchFile= new File(project.build.directory,".xdb")
         lastImportTime= touchFile.lastModified();
         log.debug("touch file: ${touchFile.absolutePath}")
