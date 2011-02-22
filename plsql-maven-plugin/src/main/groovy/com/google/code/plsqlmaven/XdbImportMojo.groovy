@@ -34,9 +34,9 @@ public class XdbImportMojo
   /**
    * Whether to import only files changed from last import
    * @since 1.0
-   * @parameter expression="${onlyChanged}"
+   * @parameter expression="${changedOnly}"
    */
-    private boolean onlyChanged;
+    private boolean changedOnly;
     
    /**
     * Location of the touch file.
@@ -80,7 +80,7 @@ public class XdbImportMojo
         {
            def file= new File(xdbSourceDirectory, filePath)
            
-           if (onlyChanged&&file.lastModified()<lastImportTime) continue;
+           if (changedOnly&&file.lastModified()<lastImportTime) continue;
            
            def xdbFolder= basePath+filePath.substring(0,filePath.lastIndexOf(File.separator))
            xdbMkdir(xdbFolder)
