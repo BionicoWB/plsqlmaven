@@ -75,6 +75,7 @@ public class XdbImportMojo
         plsqlFiles.scan()
         
         def filePaths= plsqlFiles.getIncludedFiles()
+        def cnt= 0;
         
         for (filePath in filePaths)
         {
@@ -82,11 +83,14 @@ public class XdbImportMojo
            
            if (changedOnly&&file.lastModified()<lastImportTime) continue;
            
+           cnt++;
            def xdbFolder= basePath+filePath.substring(0,filePath.lastIndexOf(File.separator))
            xdbMkdir(xdbFolder)
            xdbCreateResource(basePath+filePath,file)
         }
 
+        if (changedOnly)
+             log.info "found ${cnt} changed files..."
     }
     
     private void xdbMkdir(dir)

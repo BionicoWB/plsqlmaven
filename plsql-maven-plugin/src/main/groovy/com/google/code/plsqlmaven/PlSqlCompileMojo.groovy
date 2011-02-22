@@ -98,7 +98,13 @@ public class PlSqlCompileMojo
             
             if (determineChangedFiles())
             {
-                connectToDatabase();
+            
+                if (!connectToDatabase())
+                {
+                  fail('Need an Oracle connection')
+                  return
+                }
+            
                 
                 compileChangedFiles();
                 
