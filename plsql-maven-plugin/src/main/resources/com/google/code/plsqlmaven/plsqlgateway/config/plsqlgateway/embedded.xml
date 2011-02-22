@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity xmlns="http://code.google.com/p/eforceconfig/wiki/XMLSchema" name="plsqlgateway.user">
+	<parameters>
+		<parameter name="reset-packages" value="true"/>
+		<parameter name="x-forwarded-for" value="false" />
+		<parameter name="exclusion-list" type="list">
+		   <value value="sys\..*"/>
+		   <value value="dbms_.*"/>
+		   <value value="utl_.*"/>
+		   <value value="owa_.*"/>
+		   <value value="owa\..*"/>
+		   <value value="htp\..*"/>
+		   <value value="htf\..*"/>
+		</parameter>
+		<parameter name="default-page" value="home"/>
+		<parameter name="document-table-name" value="DOCUMENTS"/>
+		<parameter name="document-upload-mode" value="name"/>
+		<!-- <parameter name="before-procedure" value="tracer.start_profiler"/> -->
+		<!-- <parameter name="after-procedure" value="tracer.stop_profiler"/> -->
+        <!-- <parameter name="request-validation-function" value="auth.authorize"/> -->
+		<parameter name="timed-statistics" value="false"/>
+		<!-- parameter name="document-path" value="docs"/ -->
+		<!-- parameter name="document-upload-seq" value="seiasdb.seq_uploaded_document"/ -->
+	</parameters>
+</entity>

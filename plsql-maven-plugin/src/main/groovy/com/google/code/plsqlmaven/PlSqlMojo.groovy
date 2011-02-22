@@ -36,21 +36,21 @@ public abstract class PlSqlMojo
      * @since 1.0
      * @parameter expression="${username}"
      */
-    private String username;
+    protected String username;
 
     /**
      * Database password.
      * @since 1.0
      * @parameter expression="${password}"
      */
-    private String password;
+    protected String password;
 
     /**
      * Database URL.
      * @parameter expression="${url}"
      * @since 1.0
      */
-    private String url;
+    protected String url;
 
     /**
     * @parameter expression="${project}"
