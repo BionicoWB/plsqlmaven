@@ -61,7 +61,7 @@ public abstract class PlSqlMojo
    
     
     /**
-     * Database connection
+     * Database connection helper
      */
     protected Sql sql
 

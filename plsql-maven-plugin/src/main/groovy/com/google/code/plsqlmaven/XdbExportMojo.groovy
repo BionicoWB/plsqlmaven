@@ -26,33 +26,31 @@ import java.io.File;
  *
  */
 public class XdbExportMojo
-    extends PlSqlMojo
+    extends XdbMojo
 {
 
    /**
-    * The base path from witch the export should start
-    * @since 1.0
-    * @parameter expression="${basePath}"
-    * @required
-    */
-   private String basePath;
-
-   /**
-    * A comma separated list of absolute file paths to extract
+    * A comma separated list of xdb paths relative to the basePath to export
     * @since 1.0
     * @parameter expression="${filePaths}"
     */
    private String filePaths;
 
+   /**
+    * A comma separated list of xdb directory paths relative to the basePath to export
+    * use instead of filePaths to export entire subdirectories
+    * @since 1.0
+    * @parameter expression="${dirPaths}"
+    */
+   private String dirPaths;
+
   /**
-   * Whether to force extraction even if the local file exists
+   * Whether to force export even if the local file exists
    * @since 1.0
    * @parameter expression="${force}"
    */
    private boolean force;
    
-   private String xdbDir;
-
     void execute()
     {
         if (checkSourceDirectory())
@@ -70,31 +68,25 @@ public class XdbExportMojo
     
     private checkSourceDirectory()
     {
-        xdbDir= project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"xdb"
         
-        def continueExtraction= (force||!new File(xdbDir).exists())
+        def continueExtraction= (force||!new File(xdbSourceDirectory).exists())
         
         if (continueExtraction)
-          ant.mkdir(dir: xdbDir)
+          ant.mkdir(dir: xdbSourceDirectory)
         else
           fail('BE CAREFUL: The xdb directory exists... Use -Dforce to force the export, this may overwrite existing files')
           
-        return (continueExtraction);
+        return continueExtraction
     }
     
     private exportFiles()
     {
-        def pathFilter= '';
         
-        if (filePaths)
-            pathFilter= " and any_path in ('"+filePaths.split(',').collect({ it.toUpperCase() }).join("','")+"')"
-        
-        log.debug pathFilter
-            
-        sql.eachRow("select any_path path, XDBURIType(any_path).getBlob() content from resource_view where any_path like ${basePath}||'%'"+pathFilter)
+        def things_to_do_to_export_a_path= 
         {
-            def path= xdbDir+it.path.replaceAll('/',File.separator)
+            def path= xdbSourceDirectory+it.path.replaceAll('/',File.separator)
             def content= it.content?.binaryStream
+            
             
             if (content) // is a file
             {
@@ -103,12 +95,33 @@ public class XdbExportMojo
                 
                 log.info "exporting xdb file: "+path
                 
-                def targetFile= new File(path);
+                def targetFile= new File(path)
                 targetFile << content
             }
        
         }
         
+        if (filePaths)
+        {
+           def pathFilter= " where path in ('"+filePaths.split(',').join("','")+"')"
+           sql.eachRow("select * from (select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1) "+pathFilter,things_to_do_to_export_a_path)
+        }
+
+        if (dirPaths)
+        {
+           def paths= dirPaths.split(',');
+           
+           def pathFilter= '';
+           def cnt=2;
+           
+           for (path in paths)
+              pathFilter+= "or under_path(res, '"+basePath+path+"', "+(cnt++)+") = 1"
+              
+           pathFilter= ' and ('+pathFilter.substring(3)+')'
+           
+           log.info "select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 "+pathFilter 
+           sql.eachRow("select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 "+pathFilter,things_to_do_to_export_a_path)
+        }        
     }
     
 }
