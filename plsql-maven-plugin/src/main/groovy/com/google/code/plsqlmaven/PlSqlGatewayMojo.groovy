@@ -35,8 +35,9 @@ import java.io.File;
 import javax.sql.DataSource;
 
 /**
- * Starts a PL/SQL Gateway
- *
+ * Starts a java PL/SQL Gateway 
+ * and allows to debug OWA apps 
+ * 
  * @goal gateway
  *
  */

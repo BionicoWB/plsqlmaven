@@ -22,7 +22,7 @@ import oracle.sql.BLOB
 import groovy.sql.Sql
 
 /**
- * Extracts XDB files from the database to filesystem
+ * Import files to XDB
  *
  * @goal xdb-import
  *

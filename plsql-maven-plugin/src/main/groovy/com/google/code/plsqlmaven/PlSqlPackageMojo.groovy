@@ -18,7 +18,7 @@ package com.google.code.plsqlmaven;
 
 
 /**
- * Creates package for PL/SQL artifact
+ * Packages the PL/SQL artifact
  *
  * @goal package
  * 

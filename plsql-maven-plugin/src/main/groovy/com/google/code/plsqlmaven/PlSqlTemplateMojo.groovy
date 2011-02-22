@@ -19,7 +19,7 @@ package com.google.code.plsqlmaven;
 import groovy.text.GStringTemplateEngine
 
 /**
- * Creates source files by type
+ * Quickstart goal to create PL/SQL source files
  *
  * @goal template
  *
