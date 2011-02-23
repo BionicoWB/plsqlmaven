@@ -23,12 +23,12 @@ package com.google.code.plsqlmaven;
  * @goal package
  * 
  * @phase prepare-package
+ *
+ * @requiresDependencyResolution compile
  */
 public class PlSqlPackageMojo
     extends PlSqlMojo
 {
-    public static final SQLPLUS_SCRIPT= 'plsql_source.sqlplus.sql';
-    
     void execute()
     {
         def plsqlOutputDirectory= project.build.outputDirectory+File.separator+"plsql"
