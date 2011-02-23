@@ -16,11 +16,14 @@ package com.google.code.plsqlmaven;
  * limitations under the License.
  */
 
-import org.codehaus.plexus.util.DirectoryScanner;
-import org.codehaus.plexus.util.IOUtil;
+import org.codehaus.plexus.util.DirectoryScanner
+import org.codehaus.plexus.util.IOUtil
 
 import org.codehaus.groovy.maven.mojo.GroovyMojo
 import groovy.sql.Sql
+
+import java.io.File
+
 
 
 /**
@@ -153,9 +156,9 @@ public abstract class PlSqlMojo
     
     public getArtifactPlsqlSourceFiles(artifact)
     {
-        def depsDir= new File(project.build.directory,"deps");
+        def depsDir= new File(project.build.directory,'deps');
         def artifactDir= new File(depsDir,artifact.id)
-        return getPlsqlSourceFiles(artifactDir.absolutePath)
+        return getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
     }
 
     public get_type_ext(type)

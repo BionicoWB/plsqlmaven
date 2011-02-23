@@ -20,22 +20,21 @@ package com.google.code.plsqlmaven;
 /**
  * Packages the PL/SQL artifact
  *
- * @goal package
- * 
+ * @goal xdb-package
+ *
  * @phase prepare-package
  */
-public class PlSqlPackageMojo
-    extends PlSqlMojo
+public class XdbPackageMojo
+    extends XdbMojo
 {
-    public static final SQLPLUS_SCRIPT= 'plsql_source.sqlplus.sql';
     
     void execute()
     {
-        def plsqlOutputDirectory= project.build.outputDirectory+File.separator+"plsql"
-        ant.mkdir(dir: plsqlOutputDirectory)
-        ant.copy(todir: plsqlOutputDirectory) 
+        def xdbOutputDirectory= project.build.outputDirectory+File.separator+"xdb"
+        ant.mkdir(dir: xdbOutputDirectory)
+        ant.copy(todir: xdbOutputDirectory)
         {
-            ant.fileset(dir: project.build.sourceDirectory) 
+            ant.fileset(dir: xdbSourceDirectory)
         }
     }
 }
