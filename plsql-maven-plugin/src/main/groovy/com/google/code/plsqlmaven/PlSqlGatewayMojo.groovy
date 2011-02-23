@@ -15,10 +15,10 @@ package com.google.code.plsqlmaven;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.mortbay.jetty.Server
-import org.mortbay.jetty.Connector
-import org.mortbay.jetty.webapp.WebAppContext
-import org.mortbay.jetty.nio.SelectChannelConnector
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.Connector
+import org.eclipse.jetty.webapp.WebAppContext
+import org.eclipse.jetty.server.nio.SelectChannelConnector
 
 import com.google.code.eforceconfig.Config;
 import com.google.code.eforceconfig.EntityConfig;
@@ -81,7 +81,9 @@ public class PlSqlGatewayMojo
         webappRoot= (webappRoot ? webappRoot : project.basedir.absolutePath+File.separator+'src'+File.separator+'main'+File.separator+'webapp')
         webappContext= (webappContext ? webappContext: '/'+project.build.finalName)
         
-        ant.mkdir(dir: webappRoot);
+        def webInfDir= webappRoot+File.separator+"WEB-INF"
+        ant.mkdir(dir: webInfDir)
+        createSampleWebXML(webInfDir)      
         
         log.info "webappRoot: ${webappRoot}"
         log.info "webappContext: ${webappContext}"
@@ -125,6 +127,18 @@ public class PlSqlGatewayMojo
         new Config("embedded").init(cci);
         
         wac.setAttribute(DADContextListener.DAD_DATA_SOURCE+"|embedded", getCurrentDS())
+    }
+    
+    private createSampleWebXML(webInfDir)
+    {
+       def wxml = this.getClass().getClassLoader().getResourceAsStream("web.xml")
+       File webXML= new File(webInfDir,"web.xml")
+       
+       if (!webXML.exists())
+       {
+         webXML << wxml
+         log.info "Created default web.xml: ${webXML.absolutePath}"
+       }
     }
     
 }
