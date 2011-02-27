@@ -35,13 +35,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>org.codehaus.plexus</groupId>
-    	<artifactId>plexus-utils</artifactId>
-    	<version>1.5.8</version>
-    	<type>jar</type>
-    	<scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
       <version>7.0.0.M4</version>
