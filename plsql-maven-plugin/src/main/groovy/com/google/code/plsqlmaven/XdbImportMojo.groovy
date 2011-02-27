@@ -17,7 +17,6 @@ package com.google.code.plsqlmaven;
  */
 
 import java.io.File
-import org.codehaus.plexus.util.DirectoryScanner
 import oracle.sql.BLOB
 import groovy.sql.Sql
 
@@ -47,7 +46,8 @@ public class XdbImportMojo
     * Last import time.
     */
     private lastImportTime= 0L;
-
+    
+    
     void execute()
     {
         if (!connectToDatabase())
@@ -66,26 +66,28 @@ public class XdbImportMojo
         if (!new File(xdbSourceDirectory).exists())
           return;
 
-        DirectoryScanner plsqlFiles= new DirectoryScanner()
-       
-        plsqlFiles.setBasedir(xdbSourceDirectory)
-       
-        plsqlFiles.setIncludes(["**/*.*"] as String[])
-       
-        plsqlFiles.scan()
-        
-        def filePaths= plsqlFiles.getIncludedFiles()
         def cnt= 0;
         
-        for (filePath in filePaths)
+        def scanner=  ant.fileScanner
         {
-           def file= new File(xdbSourceDirectory, filePath)
-           
+            fileset(dir: xdbSourceDirectory)
+        }
+
+        for (file in scanner)
+        {
            if (changedOnly&&file.lastModified()<lastImportTime) continue;
+           def filePath= file.absolutePath.replace(xdbSourceDirectory,'')
            
            cnt++;
-           def xdbFolder= basePath+filePath.substring(0,filePath.lastIndexOf(File.separator))
-           xdbMkdir(xdbFolder)
+           
+           // ensure xdb folder exists
+           def fsli= filePath.lastIndexOf(File.separator);
+           if (fsli!=-1)
+           {
+              def xdbFolder= basePath+filePath.substring(0,fsli)
+              xdbMkdir(xdbFolder)
+           }
+           
            xdbCreateResource(basePath+filePath,file)
         }
 
@@ -137,8 +139,19 @@ public class XdbImportMojo
         
         BLOB content = BLOB.createTemporary(sql.connection,true,BLOB.DURATION_SESSION)
         def cout= content.setBinaryStream(1)
-        def fin= new FileInputStream(file)
-        cout << fin
+        
+        if (translateEntitiesEnabled(path))
+        {
+            log.info "removing html entities form ${path}..."
+            def text= removeHtmlEntities(file.getText('UTF-8'))
+            log.debug text
+            cout << text
+        }
+        else
+        {
+            def fin= new FileInputStream(file)
+            cout << fin
+        }
         
         sql.call("""declare
                        v_dummy number:= 0;
@@ -164,7 +177,7 @@ public class XdbImportMojo
             sql.connection.commit()
             
             if (ok)
-              log.info "Imported xdb resorce: "+path                     
+              log.info "Imported xdb resource: "+path                     
         }
 
         sql.connection.autoCommit = true
@@ -182,5 +195,5 @@ public class XdbImportMojo
         ant.mkdir(dir: project.build.directory)
         ant.touch(file: touchFile.getAbsolutePath())
     }
-
+    
 }

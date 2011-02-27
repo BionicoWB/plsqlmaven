@@ -16,9 +16,6 @@ package com.google.code.plsqlmaven;
  * limitations under the License.
  */
 
-import org.codehaus.plexus.util.DirectoryScanner
-import org.codehaus.plexus.util.IOUtil
-
 import org.codehaus.groovy.maven.mojo.GroovyMojo
 import groovy.sql.Sql
 
@@ -116,19 +113,18 @@ public abstract class PlSqlMojo
         if (!new File(dir).exists())
          return [];
 
-        DirectoryScanner plsqlFiles= new DirectoryScanner();
+        def scanner=  ant.fileScanner 
+        {
+            fileset(dir: dir) 
+            {
+                include(name: "**/*"+PLSQL_EXTENSION)
+            }
+        }
         
-        plsqlFiles.setBasedir(dir);
+        def files= []
         
-        plsqlFiles.setIncludes(["**/*"+PLSQL_EXTENSION] as String[]);
-        
-        plsqlFiles.scan();
-
-        def fileNames= plsqlFiles.getIncludedFiles();
-        def files= [];
-        
-        for (fileName in fileNames)
-           files << new File(dir, fileName)
+        for (file in scanner)
+           files << file
            
         log.debug("found ${files.size} sources...");
         

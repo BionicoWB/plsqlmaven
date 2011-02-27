@@ -31,6 +31,9 @@ public class XdbPackageMojo
     void execute()
     {
         def xdbOutputDirectory= project.build.outputDirectory+File.separator+"xdb"
+        if (project.getPackaging()=='war')
+          xdbOutputDirectory= project.build.directory+"/${project.build.finalName}/WEB-INF/xdb".replace('/', File.separator)
+
         ant.mkdir(dir: xdbOutputDirectory)
         ant.copy(todir: xdbOutputDirectory)
         {

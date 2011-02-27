@@ -1,5 +1,7 @@
 package com.google.code.plsqlmaven;
 
+import java.io.File;
+
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
  *
@@ -32,10 +34,13 @@ public class PlSqlPackageMojo
     void execute()
     {
         def plsqlOutputDirectory= project.build.outputDirectory+File.separator+"plsql"
+        if (project.getPackaging()=='war')
+          plsqlOutputDirectory= project.build.directory+"/${project.build.finalName}/WEB-INF/plsql".replace('/', File.separator)
+  
         ant.mkdir(dir: plsqlOutputDirectory)
-        ant.copy(todir: plsqlOutputDirectory) 
+        ant.copy(todir: plsqlOutputDirectory)
         {
-            ant.fileset(dir: project.build.sourceDirectory) 
-        }
+          ant.fileset(dir: project.build.sourceDirectory)
+        }  
     }
 }
