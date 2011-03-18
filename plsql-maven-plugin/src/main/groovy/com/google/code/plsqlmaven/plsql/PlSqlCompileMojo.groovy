@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -17,8 +17,6 @@ package com.google.code.plsqlmaven;
  */
 
 import groovy.xml.MarkupBuilder
-
-
 
 /**
  * Compile PL/SQL sources.
@@ -268,13 +266,8 @@ public class PlSqlCompileMojo
            if (it.changed)
            {
                log.info("compiling: "+it.file.getAbsolutePath()+"...")
-            
-               def ddl= it.file.getText()
-               ddl= ddl.substring(0,ddl.lastIndexOf("/"))
-              
-               log.debug(ddl);
                
-               sql.execute(ddl)
+               compile(it.file)
            }
         }
         

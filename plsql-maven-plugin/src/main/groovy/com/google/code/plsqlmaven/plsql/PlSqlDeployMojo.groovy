@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -17,13 +17,13 @@ package com.google.code.plsqlmaven;
  */
 
 
-
-
 /**
  * Deploy the contents of a PL/SQL jar archive into the given
  * database connection
+ * 
+ * @goal deploy
  */
-public class PackageInstaller
+public class PlSqlDeployMojo
 extends PlSqlMojo
 {
    /**
@@ -49,17 +49,7 @@ extends PlSqlMojo
     
      public void deploy()
      {
-         def rootDir= (System.getProperty("java.io.tmpdir")
-                       +File.separator
-                       +jarPath.substring(jarPath.lastIndexOf(File.separator)+1,
-                                          jarPath.lastIndexOf('.'))
-                       +'_'+Math.random())
-                     
-         ant.delete(dir: rootDir)
-         ant.mkdir(dir: rootDir)
-         ant.unzip(src: getJarPath(), dest: rootDir)
-         
-         
+         plSqlUtils.deployJar(jarPath)
      }
      
 }

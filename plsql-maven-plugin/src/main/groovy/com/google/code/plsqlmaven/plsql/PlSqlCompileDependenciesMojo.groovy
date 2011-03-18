@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -15,7 +15,6 @@ package com.google.code.plsqlmaven;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 
 /**
  * Compile PL/SQL dependencies sources.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<entity xmlns="http://code.google.com/p/eforceconfig/wiki/XMLSchema" name="plsqlgateway.user">
+<entity xmlns="http://code.google.com/p/eforceconfig/wiki/XMLSchema" name="plsqlgateway.embedded">
 	<parameters>
 		<parameter name="reset-packages" value="true"/>
 		<parameter name="x-forwarded-for" value="false" />
@@ -12,7 +12,7 @@
 		   <value value="htp\..*"/>
 		   <value value="htf\..*"/>
 		</parameter>
-		<parameter name="default-page" value="home"/>
+		<parameter name="default-page" value="${defaultPage}"/>
 		<parameter name="document-table-name" value="DOCUMENTS"/>
 		<parameter name="document-upload-mode" value="name"/>
 		<!-- <parameter name="before-procedure" value="tracer.start_profiler"/> -->

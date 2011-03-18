@@ -22,7 +22,7 @@
         <plugin>
             <groupId>com.google.code.plsqlmaven</groupId>
             <artifactId>plsql-maven-plugin</artifactId>
-            <version>1.1-SNAPSHOT</version>
+            <version>${project.version}</version>
 
             <dependencies>
                                 <dependency>
@@ -53,6 +53,50 @@
               </execution>
               <execution>
                  <id>package-plsql-source</id>
+                 <phase>prepare-package</phase>
+                 <goals>
+                   <goal>package</goal>
+                 </goals>
+              </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>com.google.code.plsqlmaven</groupId>
+            <artifactId>xdb-maven-plugin</artifactId>
+            <version>${project.version}</version>
+
+            <dependencies>
+                                <dependency>
+                            <!-- due to the license you have to download the ojdbc6.jar from here: http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html
+                                 and install in your local repository:
+                                 mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6.jar
+                              -->
+                                  <groupId>com.oracle</groupId>
+                                  <artifactId>ojdbc6</artifactId>
+                                  <version>11.2.0.2.0</version>
+                                  <scope>provided</scope>
+                                </dependency>
+            </dependencies>
+
+            <configuration>
+               <url>${databaseUrl}</url>
+               <username>${databaseUser}</username>
+               <password>${databasePassword}</password>
+            </configuration>
+            
+            <executions>
+              <execution>
+                 <id>import-changed-xdb-files</id>
+                 <phase>compile</phase>
+                 <goals>
+                   <goal>import</goal>
+                 </goals>
+		 <configuration>
+                    <changedOnly>true</changedOnly>
+                 </configuration>
+              </execution>
+              <execution>
+                 <id>package-xdb-files</id>
                  <phase>prepare-package</phase>
                  <goals>
                    <goal>package</goal>

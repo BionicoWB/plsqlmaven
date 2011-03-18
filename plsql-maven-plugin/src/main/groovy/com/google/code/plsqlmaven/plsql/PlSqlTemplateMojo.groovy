@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -15,8 +15,6 @@ package com.google.code.plsqlmaven;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import groovy.text.GStringTemplateEngine
 
 /**
  * Quickstart goal to create PL/SQL source files
@@ -65,41 +63,33 @@ public class PlSqlTemplateMojo
         
         ant.mkdir(dir: project.build.sourceDirectory)
         
-        def engine = new GStringTemplateEngine()
         name= name.toLowerCase();
         type= type.toLowerCase();
+        
+        def ext= plsqlUtils.getTypeExt(type)
+        def templatePath= 'com/google/code/plsqlmaven/templates/'+type+".${ext}"+PLSQL_EXTENSION;
         
         if (! ((type =~ /^package/) || (type =~ /^type/)))
         {
            def type_dir= get_dir(project.build.sourceDirectory, type)
-           def ext= get_type_ext(type)
-           def tpl = this.getClass().getClassLoader().getResourceAsStream(type+".${ext}"+PLSQL_EXTENSION)
-           tpl= new BufferedReader(new InputStreamReader(tpl))
-           def template = engine.createTemplate(tpl).make(['name': name])
            def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
-           target_file << template.toString()
-           log.info("created ${type}: "+target_file.absolutePath)
+           target_file << getTemplate(templatePath,['name': name])
+           log.info "created ${type}: "+target_file.absolutePath
         }
         else
         {
            def type_dir= get_dir(project.build.sourceDirectory, type.split()[0])
            def odir= get_dir(type_dir, name)
-           def ext= get_type_ext(type)
-           def tpl = this.getClass().getClassLoader().getResourceAsStream(type+".${ext}"+PLSQL_EXTENSION)
-           tpl= new BufferedReader(new InputStreamReader(tpl))
-           def template = engine.createTemplate(tpl).make(['name': name])
            def target_file= new File(odir, name+".${ext}"+PLSQL_EXTENSION)
-           target_file << template.toString()
+           target_file << getTemplate(templatePath,['name': name])
            log.info("created ${type}: "+target_file.absolutePath)
-           ext= get_type_ext(type+' body')
-           tpl = this.getClass().getClassLoader().getResourceAsStream(type+".${ext}"+PLSQL_EXTENSION)
-           tpl= new BufferedReader(new InputStreamReader(tpl))
-           template = engine.createTemplate(tpl).make(['name': name])
+           ext= plsqlUtils.getTypeExt(type+' body')
+           templatePath= 'com/google/code/plsqlmaven/templates/'+type+".${ext}"+PLSQL_EXTENSION;
            target_file= new File(odir, name+".${ext}"+PLSQL_EXTENSION)
-           target_file << template.toString()
+           target_file << getTemplate(templatePath,['name': name])
            log.info("created ${type} body: "+target_file.absolutePath)
         }
-
         
     }
+    
 }

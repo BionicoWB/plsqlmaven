@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -16,12 +16,10 @@ package com.google.code.plsqlmaven;
  * limitations under the License.
  */
 
+import groovy.text.GStringTemplateEngine
 import org.codehaus.groovy.maven.mojo.GroovyMojo
 import groovy.sql.Sql
-
-import java.io.File
-
-
+import com.google.code.plsqlmaven.shared.PlSqlUtils
 
 /**
  * Basic mojo to extend for PL/SQL Goals
@@ -29,7 +27,7 @@ import java.io.File
 public abstract class PlSqlMojo
     extends GroovyMojo
 {
-    public PLSQL_EXTENSION= '.plsql';
+    public static PLSQL_EXTENSION= PlSqlUtils.PLSQL_EXTENSION;
 
     /**
      * Database username. 
@@ -53,6 +51,13 @@ public abstract class PlSqlMojo
     protected String url;
 
     /**
+     * Default procedure to invoke on dad access
+     * @since 1.0
+     * @parameter defaultPage="${defaultPage}" default-value="home"
+     */
+    protected String defaultPage;
+
+   /**
     * @parameter expression="${project}"
     * @required
     * @readonly
@@ -64,6 +69,10 @@ public abstract class PlSqlMojo
      * Database connection helper
      */
     protected Sql sql
+    
+    protected PlSqlUtils plsqlUtils= new PlSqlUtils(ant,log);
+    
+    private templateEngine = new GStringTemplateEngine()
 
     public void disconnectFromDatabase()
     {
@@ -77,6 +86,7 @@ public abstract class PlSqlMojo
         {
             log.debug( "connecting to " + url )
             sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
+            plsqlUtils.setSql(sql)
         }
         else
             sql= null;
@@ -84,53 +94,6 @@ public abstract class PlSqlMojo
         return (sql!=null);
     }
 
-    public getSourceDescriptor(File source)
-    {
-            String[] path= source.getAbsolutePath().split('/')
-            def name= path[path.length-1]
-            name= name.substring(0, name.indexOf('.'))
-            def type= path[path.length-2]
-            def baseType= type
-            
-            if (type == name)
-            {
-              baseType= type= path[path.length-3]
-              
-              def ext= path[path.length-1].split('\\.');
-              
-              if (ext[1] in ['pkb','tpb'])
-                type+=' BODY';
-            }
-             
-            log.debug("type: ${type} name: ${name} file: ${source.absolutePath}")
-            
-            return ['name': name.toUpperCase(), 'baseType': baseType, 'type': type.toUpperCase(), 'file': source]
-    }
-    
-    public getPlsqlSourceFiles(dir=project.build.sourceDirectory)
-    {
-        
-        if (!new File(dir).exists())
-         return [];
-
-        def scanner=  ant.fileScanner 
-        {
-            fileset(dir: dir) 
-            {
-                include(name: "**/*"+PLSQL_EXTENSION)
-            }
-        }
-        
-        def files= []
-        
-        for (file in scanner)
-           files << file
-           
-        log.debug("found ${files.size} sources...");
-        
-        return files; 
-    }
-    
     public unpackDependencies()
     {        
         ant.delete(dir: new File(project.build.directory,"deps"))
@@ -154,32 +117,24 @@ public abstract class PlSqlMojo
     {
         def depsDir= new File(project.build.directory,'deps');
         def artifactDir= new File(depsDir,artifact.id)
-        return getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
+        return plsqlUtils.getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
     }
 
-    public get_type_ext(type)
+    public getPlsqlSourceFiles()
     {
-        switch (type)
-        {
-            case 'package':
-               return 'pks'
-            case 'package body':
-               return 'pkb'
-            case 'type':
-               return 'tps'
-            case 'type body':
-               return 'tpb'
-            case 'function':
-               return 'fnc'
-            case 'procedure':
-               return 'prc'
-            case 'trigger':
-               return 'trg'
-            default:
-               return 'unk'
-        }
+        return plsqlUtils.getPlsqlSourceFiles(project.build.sourceDirectory)
     }
-
+    
+    public getSourceDescriptor(file)
+    {
+        return plsqlUtils.getSourceDescriptor(file)
+    }
+    
+    public compile(file)
+    {
+        plsqlUtils.compile(file)
+    }
+    
     public get_dir(base,name)
     {
             def dir= new File(base, name)
@@ -187,4 +142,14 @@ public abstract class PlSqlMojo
             return dir;
     }
     
+    public String getTemplate(path,context)
+    {
+           def tpl = this.getClass().getClassLoader().getResourceAsStream(path)
+           def baos= new ByteArrayOutputStream()
+           baos << tpl
+           tpl= baos.toString().replace('\\','\\\\')
+           def template = templateEngine.createTemplate(tpl).make(context)
+           return template.toString();
+    }
+
 }

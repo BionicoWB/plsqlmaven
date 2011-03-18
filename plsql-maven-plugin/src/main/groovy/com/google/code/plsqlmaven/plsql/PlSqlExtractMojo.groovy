@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -80,7 +80,7 @@ public class PlSqlExtractMojo
         sql.eachRow("select distinct type from user_source where name not like 'SYS_PLSQL_%'"+objectsFilter)
         {
             def type= it.type.toLowerCase();
-            def ext= get_type_ext(type);
+            def ext= plsqlUtils.getTypeExt(type);
                         
             log.info(type+'...')
             

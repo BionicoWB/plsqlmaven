@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven;
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -15,24 +15,25 @@ package com.google.code.plsqlmaven;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.Connector
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.server.nio.SelectChannelConnector
 
-import com.google.code.eforceconfig.Config;
-import com.google.code.eforceconfig.EntityConfig;
-import com.google.code.eforceconfig.initializers.ClassPathConfigInitializer;
-import com.google.code.eforceconfig.sources.managers.ClassPathSourceManager;
+import com.google.code.eforceconfig.Config
+import com.google.code.eforceconfig.EntityConfig
+import com.google.code.eforceconfig.initializers.FileConfigInitializer
+import com.google.code.eforceconfig.sources.managers.FileSourceManager
 
 import com.google.code.plsqlgateway.servlet.PLSQLGatewayServlet
 import com.google.code.plsqlgateway.servlet.DADContextListener
 
-import oracle.jdbc.pool.OracleDataSource;
+import oracle.jdbc.pool.OracleDataSource
 
-import java.io.File;
+import java.io.File
 
-import javax.sql.DataSource;
+import javax.sql.DataSource
 
 /**
  * Starts a java PL/SQL Gateway 
@@ -73,8 +74,8 @@ public class PlSqlGatewayMojo
     */
    private String webappContext
 
-    void execute()
-    {
+   void execute()
+   {
         if (!url)
           fail('Need an Oracle connection')
           
@@ -83,7 +84,7 @@ public class PlSqlGatewayMojo
         
         def webInfDir= webappRoot+File.separator+"WEB-INF"
         ant.mkdir(dir: webInfDir)
-        createSampleWebXML(webInfDir)      
+        //createSampleWebXML(webInfDir)      
         
         log.info "webappRoot: ${webappRoot}"
         log.info "webappContext: ${webappContext}"
@@ -104,7 +105,7 @@ public class PlSqlGatewayMojo
 
         server.start();
         
-        log.info "webapp url: http://${bindAddress}:${port}${webappContext}/pls/"
+        log.info "webapp url: http://${bindAddress}:${port}${webappContext}/pls/${defaultPage}"
 
         server.join();
     }
@@ -122,23 +123,20 @@ public class PlSqlGatewayMojo
     {
         wac.setInitParams(['com.google.code.eforceconfig.CONFIGSET_NAME': 'embedded'])
         
-        ClassPathConfigInitializer cci= new ClassPathConfigInitializer();
-        cci.setConfigSourceManager(new ClassPathSourceManager(this.getClass().getClassLoader(),"com.google.code.plsqlmaven.plsqlgateway.config"));
-        new Config("embedded").init(cci);
+        def confDir= project.build.directory+File.separator+'gateway-config'+File.separator+'plsqlgateway';
+        ant.mkdir(dir: confDir);
+        def general= new File(confDir,'general.xml')
+        ant.truncate(file: general.absolutePath)
+        general << this.getClass().getClassLoader().getResourceAsStream('com/google/code/plsqlmaven/plsqlgateway/config/plsqlgateway/general.xml')
+        def embedded= new File(confDir,'embedded.xml')
+        ant.truncate(file: embedded.absolutePath)
+        embedded << getTemplate('com/google/code/plsqlmaven/plsqlgateway/config/plsqlgateway/embedded.xml',['defaultPage': defaultPage])
+
+        FileConfigInitializer fci= new FileConfigInitializer();
+        fci.setConfigSourceManager(new FileSourceManager(project.build.directory+File.separator+'gateway-config'));
+        new Config("embedded").init(fci);
         
         wac.setAttribute(DADContextListener.DAD_DATA_SOURCE+"|embedded", getCurrentDS())
     }
-    
-    private createSampleWebXML(webInfDir)
-    {
-       def wxml = this.getClass().getClassLoader().getResourceAsStream("web.xml")
-       File webXML= new File(webInfDir,"web.xml")
-       
-       if (!webXML.exists())
-       {
-         webXML << wxml
-         log.info "Created default web.xml: ${webXML.absolutePath}"
-       }
-    }
-    
+        
 }
