@@ -1,0 +1,68 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+            <groupId>com.google.code.plsqlmaven</groupId>
+            <artifactId>plsqlmaven</artifactId>
+            <version>1.1-SNAPSHOT</version>
+    </parent>
+
+
+  <groupId>com.google.code.plsqlmaven</groupId>
+  <artifactId>xdb-maven-plugin</artifactId>
+  <packaging>maven-plugin</packaging>
+  <name>XDB Maven Mojo</name>
+  <dependencies>
+    <dependency>
+        <groupId>org.codehaus.groovy.maven</groupId>
+        <artifactId>gmaven-mojo</artifactId>
+        <version>1.0</version>
+    </dependency>
+	<dependency>
+    <!-- due to the license you have to download the ojdbc6.jar from here: http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html 
+         and install in your local repository:
+         mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6.jar
+      -->
+	  <groupId>com.oracle</groupId>
+	  <artifactId>ojdbc6</artifactId>
+	  <version>11.2.0.2.0</version>
+	  <scope>provided</scope>
+	</dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+    	<groupId>com.google.code.plsqlmaven</groupId>
+    	<artifactId>plsql-maven-shared</artifactId>
+    	<version>${project.version}</version>
+    	<type>jar</type>
+    	<scope>compile</scope>
+    </dependency>
+  </dependencies>
+	<build>
+        <sourceDirectory>src/main/groovy</sourceDirectory>
+	<plugins>
+            <plugin>
+                <groupId>org.codehaus.groovy.maven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <version>1.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generateStubs</goal>
+                            <goal>compile</goal>
+                            <goal>generateTestStubs</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+	</plugins>
+	</build>  
+	<properties>
+		<gmaven.runtime>1.5</gmaven.runtime> <!-- read by gmaven -->
+	</properties>	
+</project>
