@@ -15,10 +15,15 @@
   <packaging>pom</packaging>
 
   <modules>
+     <module>plsql-maven-shared</module>
      <module>plsql-maven-plugin</module>
+     <module>xdb-maven-plugin</module>
+     <module>oraddl-maven-plugin</module>
      <module>plsql-maven-project</module>
      <module>plsql-package-archetype</module>
-    <module>plsql-webapp-deployer</module>
+     <module>plsql-project-archetype</module>
+     <module>plsql-webapp-archetype</module>
+     <module>plsql-webapp-deployer</module>
   </modules>
 
   <name>PL/SQL maven</name>
