@@ -1,0 +1,16 @@
+<archetype-descriptor name="plsql-webapp-archetype">
+  <fileSets>
+    <fileSet filtered="true" packaged="false">
+      <directory>src/main/plsql</directory>
+      <includes>
+        <include>**/*.plsql</include>
+      </includes>
+    </fileSet>
+    <fileSet filtered="false" packaged="false">
+      <directory>src/main/webapp</directory>
+      <includes>
+        <include>**/*.*</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+</archetype-descriptor>
