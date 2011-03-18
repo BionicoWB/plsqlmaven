@@ -3,7 +3,7 @@
     <fileSet filtered="true" packaged="false">
       <directory>src/main/plsql</directory>
       <includes>
-        <include>**/*.sql</include>
+        <include>**/*.plsql</include>
       </includes>
     </fileSet>
   </fileSets>
