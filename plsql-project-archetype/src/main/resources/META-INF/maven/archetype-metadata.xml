@@ -1,0 +1,10 @@
+<archetype-descriptor name="plsql-project-archetype">
+  <fileSets>
+    <fileSet filtered="true" packaged="false">
+      <directory>src/main/plsql</directory>
+      <includes>
+        <include>**/*.plsql</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+</archetype-descriptor>
