@@ -55,18 +55,15 @@ public abstract class OraDdlMojo
     */
     protected org.apache.maven.project.MavenProject project
    
-   /**
-    * Source directory for schema objects
-    * @since 1.0
-    * @parameter expression="${sourceDirectory}" default-value="src/main/schema"
-    */
-    protected String sourceDirectory;
- 
-    
     /**
      * Database connection helper
      */
     protected Sql sql
+    
+    /**
+     * Type specific helpers
+     */
+    private helpers= [:];
     
     public void disconnectFromDatabase()
     {
@@ -86,14 +83,42 @@ public abstract class OraDdlMojo
             
         return (sql!=null);
     }
+    
+   /**
+    * Source directory for schema files src/main/schema
+    */
+    public String getSourceDirectory()
+    {
+       return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema"+File.separator;
+    }
+    
+    public getHelper(type)
+    {
+        def helper;
+        
+        if (!(helper=helpers[type]))
+        {
+            try
+            {
+                def camelType= type.substring(0,1).toUpperCase()+type.substring(1).toLowerCase()
+                def clazz= this.getClass().getClassLoader().loadClass("com.google.code.plsqlmaven.oraddl.helpers.${camelType}Helper")
+                helper= clazz.newInstance(sql,log,username);
+                helpers[type]= helper;
+            }
+            catch (ClassNotFoundException e)
+            { /* ignore */ } 
+        }
+        
+        return helper;
+    }
 
     public String path(p)
     {
         return p.replace('/',File.separator)
     }
     
-   private val(v,d)
-   {
+    private val(v,d)
+    {
        return (v==d ? null : v);
-   }
+    }
 }
