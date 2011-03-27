@@ -92,7 +92,7 @@ public class OraDdlExtractMojo
            xml.omitNullAttributes = true
            xml.doubleQuotes = true
     
-           if (!getHelper(type)?.extract(name,xml))
+           if (!schemaUtils.getHelper(type)?.extract(name,xml))
              file.delete()
            else
              log.info "extracted ${sourceFilePath}"

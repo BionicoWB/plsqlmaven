@@ -40,6 +40,17 @@ public class OraDdlSyncMojo
    */
    private boolean detectOnly;
 
+   /**
+    * Location of the touch file.
+    */
+   private touchFile;
+
+  /**
+   * Last sync time.
+   */
+   private lastSyncTime= 0L;
+   
+
    void execute()
    {
        if (!connectToDatabase())
@@ -47,8 +58,10 @@ public class OraDdlSyncMojo
          fail('Need an Oracle connection')
          return
        }
-         
+       
+       getLastSyncTime()  
        syncObjects()
+       touchReferenceFile()
        disconnectFromDatabase()
    }
    
@@ -66,6 +79,7 @@ public class OraDdlSyncMojo
        
        for (file in scanner)
        {
+           if (changedOnly&&file.lastModified()<lastSyncTime) continue;
            def path= file.absolutePath.split(File.separator)
            def type= path[path.length-2]
            def name= path[path.length-1].split('\\.')[0]
@@ -73,47 +87,20 @@ public class OraDdlSyncMojo
            objects[type] << ['file': file, 'name': name]
        }
        
-       def order= ['table','index','sequence','synonym']
-       def parser= new XmlParser();
-       
-       order.each
-       {
-           type ->
-           
-           objects[type].each
-           {
-               object ->
-               def helper= getHelper(type);
-               if (helper)
-               {
-                   log.info "sync ${type} ${object.name}"
-                   def xml= parser.parse(object.file);
-                   
-                   if (helper.exists(xml))
-                   {
-                       def changes= helper.detectChanges(xml)
-                       applyChanges(helper,changes);
-                   }
-                   else
-                       helper.create(xml);
-               }
-           }
-       }
-       
+       schemaUtils.sync(objects)       
    } 
    
-   private applyChanges(helper,changes)
+   private void getLastSyncTime()
    {
-       if (log.debugEnabled)
-         changes.each{ log.debug it.toString() }
+       touchFile= new File(project.build.directory,".schema")
+       lastSyncTime= touchFile.lastModified();
+       log.debug("touch file: ${touchFile.absolutePath}")
+   }
 
-       if (!detectOnly)
-           changes.each
-           {
-               change ->
-               
-               helper."${change.type}"(change);
-           }
+   private void touchReferenceFile()
+   {
+       ant.mkdir(dir: project.build.directory)
+       ant.touch(file: touchFile.getAbsolutePath())
    }
    
 }

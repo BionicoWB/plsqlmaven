@@ -27,6 +27,16 @@ public class OraDdlPackageMojo
 
    void execute()
    {
+       def schemaOutputDirectory= project.build.outputDirectory+File.separator+"schema"
+       
+       if (project.getPackaging()=='war')
+         schemaOutputDirectory= project.build.directory+("/${project.build.finalName}/WEB-INF/schema").replace('/', File.separator)
+
+       ant.mkdir(dir: schemaOutputDirectory)
+       ant.copy(todir: schemaOutputDirectory)
+       {
+           ant.fileset(dir: sourceDirectory)
+       }
    }
    
 }

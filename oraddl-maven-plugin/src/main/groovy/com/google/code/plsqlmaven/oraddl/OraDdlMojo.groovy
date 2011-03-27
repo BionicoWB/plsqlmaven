@@ -18,6 +18,7 @@ package com.google.code.plsqlmaven.oraddl
 
 import groovy.sql.Sql
 import org.codehaus.groovy.maven.mojo.GroovyMojo
+import com.google.code.plsqlmaven.shared.SchemaUtils
 
 
 /**
@@ -61,9 +62,9 @@ public abstract class OraDdlMojo
     protected Sql sql
     
     /**
-     * Type specific helpers
+     * Utilities for schema handling
      */
-    private helpers= [:];
+    protected SchemaUtils schemaUtils;
     
     public void disconnectFromDatabase()
     {
@@ -77,6 +78,7 @@ public abstract class OraDdlMojo
         {
             log.debug "connecting to " + url 
             sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
+            schemaUtils= new SchemaUtils(ant,log,sql)
         }
         else
             sql= null;
@@ -92,26 +94,6 @@ public abstract class OraDdlMojo
        return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema"+File.separator;
     }
     
-    public getHelper(type)
-    {
-        def helper;
-        
-        if (!(helper=helpers[type]))
-        {
-            try
-            {
-                def camelType= type.substring(0,1).toUpperCase()+type.substring(1).toLowerCase()
-                def clazz= this.getClass().getClassLoader().loadClass("com.google.code.plsqlmaven.oraddl.helpers.${camelType}Helper")
-                helper= clazz.newInstance(sql,log,username);
-                helpers[type]= helper;
-            }
-            catch (ClassNotFoundException e)
-            { /* ignore */ } 
-        }
-        
-        return helper;
-    }
-
     public String path(p)
     {
         return p.replace('/',File.separator)
