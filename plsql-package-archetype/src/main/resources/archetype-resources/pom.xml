@@ -7,7 +7,7 @@
   <parent>
           <groupId>com.google.code.plsqlmaven</groupId>
           <artifactId>plsql-maven-project</artifactId>
-          <version>1.1</version>
+          <version>1.2</version>
   </parent>
 
   <groupId>${groupId}</groupId>
@@ -22,39 +22,9 @@
       <plugin>
         <groupId>com.google.code.plsqlmaven</groupId>
         <artifactId>plsql-maven-plugin</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.2</version>
       </plugin>
     </plugins>
   </build>
   
-		    <!-- define profiles like this in your ~/.m2/settings.xml
-		         to define connections
-		         
-					<settings>
-					  <profiles>
-					           <profile>
-					             <id>app_dev</id>
-					             <properties>
-					                     <databaseUrl>jdbc:oracle:thin:@dev_server:1521:dev10g</databaseUrl>
-					                     <databaseUser>app</databaseUser>
-					                     <databasePassword>app_pwd</databasePassword>
-					             </properties>
-					           </profile>
-					           <profile>
-					             <id>app_qa</id>
-					             <properties>
-					                     <databaseUrl>jdbc:oracle:thin:@qa_server:1521:qa10g</databaseUrl>
-					                     <databaseUser>app</databaseUser>
-					                     <databasePassword>app_pwd</databasePassword>
-					             </properties>
-					           </profile>
-					  </profiles>
-					</settings>
-		    
-		      so you are able to:
-		      
-		      mvn -Papp_dev compile
-
-		      -->
-
 </project>
