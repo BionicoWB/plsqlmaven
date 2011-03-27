@@ -28,7 +28,7 @@
   </modules>
 
   <name>PL/SQL maven</name>
-  <description>This project contains tries to bring maven developmen to PL/SQL developers</description>
+  <description>This project contains tries to bring maven development to PL/SQL developers</description>
   <url>http://code.google.com/p/plsqlmaven/</url>
     <licenses>
             <license>
