@@ -47,9 +47,11 @@ class DeployerContextListener implements ServletContextListener
         def ant= new AntBuilder();
         def sql= getSql(ctx)
         def plsqlUtils= new PlSqlUtils(ant,log,sql);
-        def xdbUtils= new XdbUtils(sql,log);
+        def xdbUtils= new XdbUtils(ant,log,sql);
+        def schemaUtils= new SchemaUtils(ant,log,sql);
         plsqlUtils.compileDirectory(ctx.getRealPath('WEB-INF/plsql'))   
-        xdbUtils.importDirectory(ctx.getRealPath('WEB-INF/xdb'),ant)   
+        xdbUtils.importDirectory(ctx.getRealPath('WEB-INF/xdb'))   
+        schemaUtils.syncDirectory(ctx.getRealPath('WEB-INF/schema'))   
     }
     
     public void contextDestroyed(ServletContextEvent event)

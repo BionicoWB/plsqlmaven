@@ -92,7 +92,7 @@ public abstract class XdbMojo
        {
            log.debug( "connecting to " + url )
            sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
-           xdbUtils= new XdbUtils(sql,log)
+           xdbUtils= new XdbUtils(ant,log,sql)
        }
        else
            sql= null;

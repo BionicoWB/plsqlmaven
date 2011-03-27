@@ -15,6 +15,7 @@
   <packaging>pom</packaging>
 
   <modules>
+     <module>oraddl-helpers</module>
      <module>plsql-maven-shared</module>
      <module>plsql-maven-plugin</module>
      <module>xdb-maven-plugin</module>

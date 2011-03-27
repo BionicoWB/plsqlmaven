@@ -14,16 +14,17 @@
   <name>shared utils</name>
   <dependencies>
 	<dependency>
+	    <groupId>com.google.code.plsqlmaven</groupId>
+	    <artifactId>oraddl-helpers</artifactId>
+	    <version>${project.version}</version>
+	</dependency>
+	<dependency>
 	    <groupId>org.codehaus.groovy</groupId>
 	    <artifactId>groovy</artifactId>
 	    <version>1.7.6</version>
 	    <scope>provided</scope>
 	</dependency>
 	<dependency>
-    <!-- due to the license you have to download the ojdbc6.jar from here: http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html 
-         and install in your local repository:
-         mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6.jar
-      -->
 	  <groupId>com.oracle</groupId>
 	  <artifactId>ojdbc6</artifactId>
 	  <version>11.2.0.2.0</version>

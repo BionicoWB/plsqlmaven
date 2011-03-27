@@ -26,17 +26,18 @@ import oracle.sql.BLOB
  */
 public class XdbUtils
 {
+    private ant;
+    private log;
     private Sql sql;
     
-    private log;
-    
-    public XdbUtils(Sql sql, log)
+    public XdbUtils(ant,log,sql)
     {
+        this.ant= ant;
         this.sql= sql;
         this.log= log;
     }
     
-    public void importDirectory(dir,ant)
+    public void importDirectory(dir)
     {
         if (!new File(dir).exists())
         return;
