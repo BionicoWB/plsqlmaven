@@ -46,12 +46,13 @@ abstract class OraDdlHelper
       
       public cmp(v1,v2)
       {
+          log.debug 'cmp: '+v1?.toString()+'=='+v2?.toString()
           return (v1?.toString()==v2?.toString());
       }
    
       public doddl(ddl,privMessage)
       {
-          log.debug ddl
+          log.info ddl
           
           try
           {

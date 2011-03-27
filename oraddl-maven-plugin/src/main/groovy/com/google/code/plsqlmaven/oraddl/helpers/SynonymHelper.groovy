@@ -30,13 +30,13 @@ class SynonymHelper extends OraDdlHelper
            sql.eachRow("select a.*, user current_user from user_synonyms a where synonym_name = upper(${name})")
            {
               def syn= it.toRowResult()
-              xml.sequence('name':         name, 
-                           'for':          syn.table_name.toLowerCase(),
-                           'for-owner':    rd(syn.table_owner,syn.current_user)?.toLowerCase(),
-                           'db-link':      syn.db_link?.toLowerCase());
+              xml.synonym('name':         name, 
+                          'for':          syn.table_name.toLowerCase(),
+                          'for-owner':    rd(syn.table_owner,syn.current_user)?.toLowerCase(),
+                          'db-link':      syn.db_link?.toLowerCase())
            }
            
-           return true;
+           return true
       }
       
       public boolean exists(synonym)
