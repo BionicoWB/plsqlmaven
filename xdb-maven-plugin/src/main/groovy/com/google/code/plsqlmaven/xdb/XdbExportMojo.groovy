@@ -101,27 +101,22 @@ public class XdbExportMojo
        
         }
         
+        def filePathFilter= '1=0';
+        
         if (filePaths)
-        {
-           def pathFilter= " where path in ('"+filePaths.split(',').join("','")+"')"
-           sql.eachRow("select * from (select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1) "+pathFilter,things_to_do_to_export_a_path)
-        }
+           filePathFilter= "path in ('"+filePaths.split(',').join("','")+"')"
+
+        def dirPathFilter= '1=1 and ';
 
         if (dirPaths)
         {
-           def paths= dirPaths.split(',');
-           
-           def pathFilter= '';
-           def cnt=2;
-           
-           for (path in paths)
-              pathFilter+= "or under_path(res, '"+basePath+path+"', "+(cnt++)+") = 1"
-              
-           pathFilter= ' and ('+pathFilter.substring(3)+')'
-           
-           log.info "select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 "+pathFilter 
-           sql.eachRow("select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 "+pathFilter,things_to_do_to_export_a_path)
-        }        
+           def cnt=2;           
+           dirPathFilter= '('+dirPaths.split(',').collect{ path -> "under_path(res, '"+basePath+path+"', "+(cnt++)+") = 1"}.join(' or ')+') or '
+        }
+        
+        def query= "select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 and ("+dirPathFilter+filePathFilter+")";
+        log.debug query
+        sql.eachRow(query,things_to_do_to_export_a_path)
     }
     
 }
