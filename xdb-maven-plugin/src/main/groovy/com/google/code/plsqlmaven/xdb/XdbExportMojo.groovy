@@ -104,7 +104,7 @@ public class XdbExportMojo
         def filePathFilter= '1=0';
         
         if (filePaths)
-           filePathFilter= "path in ('"+filePaths.split(',').join("','")+"')"
+           filePathFilter= "("+filePaths.split(',').collect{ path -> "equals_path(res, '"+basePath+path+"') = 1"}.join(' or ')+")"
 
         def dirPathFilter= '1=1 and ';
 
