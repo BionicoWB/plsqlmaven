@@ -24,6 +24,7 @@ import javax.servlet.ServletContext
 
 import com.google.code.plsqlmaven.shared.PlSqlUtils
 import com.google.code.plsqlmaven.shared.XdbUtils
+import com.google.code.plsqlmaven.shared.SchemaUtils
 
 import com.google.code.plsqlgateway.servlet.DADContextListener
 

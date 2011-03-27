@@ -17,6 +17,8 @@ package com.google.code.plsqlmaven.oraddl
  */
 
 import groovy.xml.MarkupBuilder
+import com.google.code.plsqlmaven.oraddl.helpers.DDLException
+
 
 /**
  * Extracts schema objects to xml files
@@ -87,7 +89,14 @@ public class OraDdlSyncMojo
            objects[type] << ['file': file, 'name': name]
        }
        
-       schemaUtils.sync(objects)       
+       try
+       {
+         schemaUtils.sync(objects)
+       }
+       catch (DDLException ex)
+       {
+           fail(ex.failMessage)
+       }       
    } 
    
    private void getLastSyncTime()

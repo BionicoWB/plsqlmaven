@@ -61,7 +61,7 @@ abstract class OraDdlHelper
           catch (Exception ex)
           {
               if (ex.errorCode==1031)
-                fail(privMessage);
+                throw new DDLException(privMessage);
               else
                 throw ex;
           }
