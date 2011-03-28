@@ -21,6 +21,7 @@
      <module>xdb-maven-plugin</module>
      <module>oraddl-maven-plugin</module>
      <module>plsql-maven-project</module>
+     <module>plsql-maven-webapp</module>
      <module>plsql-package-archetype</module>
      <module>plsql-project-archetype</module>
      <module>plsql-webapp-archetype</module>
