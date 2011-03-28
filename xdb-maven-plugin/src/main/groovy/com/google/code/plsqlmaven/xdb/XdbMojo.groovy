@@ -56,13 +56,6 @@ public abstract class XdbMojo
    */
    protected org.apache.maven.project.MavenProject project
   
-   
-   /**
-    * Database connection helper
-    */
-   protected Sql sql
-
-
    /**
     * The base path from witch the export should start
     * @since 1.0
@@ -72,11 +65,18 @@ public abstract class XdbMojo
    protected String basePath;
 
    /**
-    * The base path from witch the export should start
+    * A list of comma separated file extensions to 
+    * enable html entity translation 
     * @since 1.0
     * @parameter expression="${translateEntities}"
     */
    protected String translateEntities;
+
+   
+   /**
+    * Database connection helper
+    */
+   protected Sql sql
 
    protected XdbUtils xdbUtils;
    
