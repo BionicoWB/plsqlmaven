@@ -101,7 +101,7 @@ public class XdbExportMojo
        
         }
         
-        def filePathFilter= '1=0';
+        def filePathFilter= '1=1';
         
         if (filePaths)
            filePathFilter= "("+filePaths.split(',').collect{ path -> "equals_path(res, '"+basePath+path+"') = 1"}.join(' or ')+")"
@@ -111,7 +111,13 @@ public class XdbExportMojo
         if (dirPaths)
         {
            def cnt=2;           
-           dirPathFilter= '('+dirPaths.split(',').collect{ path -> "under_path(res, '"+basePath+path+"', "+(cnt++)+") = 1"}.join(' or ')+') or '
+           dirPathFilter= '('+dirPaths.split(',').collect{ path -> "under_path(res, '"+basePath+path+"', "+(cnt++)+") = 1"}.join(' or ')+')  '
+           
+           if (filePaths)
+             dirPathFilter+=  ' or '
+           else
+             dirPathFilter+=  ' and '
+           
         }
         
         def query= "select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 and ("+dirPathFilter+filePathFilter+")";
