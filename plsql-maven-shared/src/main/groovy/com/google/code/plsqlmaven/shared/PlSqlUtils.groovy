@@ -53,7 +53,7 @@ public class PlSqlUtils
         
     public static getSourceDescriptor(File source)
     {
-            String[] path= source.getAbsolutePath().split('/')
+            String[] path= source.getAbsolutePath().split(File.separator)
             def name= path[path.length-1]
             name= name.substring(0, name.indexOf('.'))
             def type= path[path.length-2]
