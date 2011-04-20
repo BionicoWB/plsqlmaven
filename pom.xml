@@ -11,7 +11,7 @@
 
   <groupId>com.google.code.plsqlmaven</groupId>
   <artifactId>plsqlmaven</artifactId>
-  <version>1.7-SNAPSHOT</version>
+  <version>1.7</version>
   <packaging>pom</packaging>
 
   <modules>
@@ -39,9 +39,9 @@
             </license>
     </licenses>
     <scm>
-        <url>http://code.google.com/p/plsqlmaven/source/browse/trunk</url>
-        <connection>scm:svn:http://plsqlmaven.googlecode.com/svn/trunk</connection>
-        <developerConnection>scm:svn:https://plsqlmaven.googlecode.com/svn/trunk</developerConnection>
+        <url>http://code.google.com/p/plsqlmaven/source/browse/tags/plsqlmaven-1.7</url>
+        <connection>scm:svn:http://plsqlmaven.googlecode.com/svn/tags/plsqlmaven-1.7</connection>
+        <developerConnection>scm:svn:https://plsqlmaven.googlecode.com/svn/tags/plsqlmaven-1.7</developerConnection>
     </scm>
         <developers>
             <developer>
