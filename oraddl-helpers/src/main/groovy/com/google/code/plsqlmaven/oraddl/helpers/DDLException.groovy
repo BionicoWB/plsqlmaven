@@ -18,9 +18,9 @@ package com.google.code.plsqlmaven.oraddl.helpers
 
 class DDLException extends Exception
 {
-    public failMessage
+    public String failMessage
     
-    public DDLException(failMessage)
+    public DDLException(String failMessage)
     {
           this.failMessage= failMessage
     }

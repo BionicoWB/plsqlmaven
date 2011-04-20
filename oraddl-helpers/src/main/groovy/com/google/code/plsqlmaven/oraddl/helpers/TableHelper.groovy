@@ -431,7 +431,7 @@ class TableHelper extends OraDdlHelper
                        changes << ex.context
                  }
           }
-                     
+          
           return changes
       }
    

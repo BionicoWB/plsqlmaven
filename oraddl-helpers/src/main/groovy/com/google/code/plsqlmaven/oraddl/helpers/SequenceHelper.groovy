@@ -30,11 +30,12 @@ class SequenceHelper extends OraDdlHelper
            sql.eachRow("select * from user_sequences where sequence_name = upper(${name})")
            {
               def seq= it.toRowResult()
+              def cache= rd(seq.cache_size,20);
               xml.sequence('name':         name, 
                            'min-value':    rd(seq.min_value,1),
                            'max-value':    rd(seq.max_value,999999999999999999999999999),
                            'increment-by': rd(seq.increment_by,1),
-                           'cache':        rd(seq.cache_size,20),
+                           'cache':        (cache=='0' ? 'false' : cache),
                            'cycle':        (seq.cycle_flag=='Y' ? 'true' : null),
                            'order':        (seq.order_flag=='Y' ? 'true' : null));
            }
@@ -69,7 +70,7 @@ class SequenceHelper extends OraDdlHelper
             
           if (sequence.'@cache'!=null)
           {
-            if (sequence.'@cache'=='false')
+            if (sequence.'@cache'=='false'||sequence.'@cache'=='0')
                ddl+=' nocache'
             else
                ddl+=' cache '+sequence.'@cache'
@@ -101,7 +102,8 @@ class SequenceHelper extends OraDdlHelper
           sql.eachRow("select * from user_sequences where sequence_name= upper(${sequence.'@name'})")
           {
              def dbseq= it.toRowResult()
-                      
+             def dbcache= (dbseq.cache_size==0 ? 'false' : dbseq.cache_size);
+                     
              if (!cmp(dv(sequence.'@min-value',1),dv(dbseq.min_value,1)))
                  changes << [type: 'sequence_minvalue', sequence: sequence.'@name', minvalue:  sequence.'@min-value']
                  
@@ -111,7 +113,7 @@ class SequenceHelper extends OraDdlHelper
              if (!cmp(dv(sequence.'@increment-by',1),dv(dbseq.increment_by,1)))
                  changes << [type: 'sequence_incrementby', sequence: sequence.'@name', incrementby:  sequence.'@increment-by']
                  
-             if (!cmp(dv(sequence.'@cache',20),dv(dbseq.cache_size,20)))
+             if (!cmp(dv(sequence.'@cache',20),dv(dbcache,20)))
                  changes << [type: 'sequence_cache', sequence: sequence.'@name', 'cache':  sequence.'@cache']
    
              if (!cmp(sequence.'@cycle',(dbseq.cycle_flag=='Y' ? 'true' : null)))
@@ -169,7 +171,7 @@ class SequenceHelper extends OraDdlHelper
           
           if (change.cache!=null)
           {
-            if (change.cache=='false')
+            if (change.cache=='false'||change.cache=='0')
               ddl= "alter sequence ${change.sequence} nocache"
             else
               ddl= "alter sequence ${change.sequence} cache ${change.cache}"

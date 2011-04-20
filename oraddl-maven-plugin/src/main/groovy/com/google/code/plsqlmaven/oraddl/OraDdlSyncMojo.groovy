@@ -89,14 +89,8 @@ public class OraDdlSyncMojo
            objects[type] << ['file': file, 'name': name]
        }
        
-       try
-       {
-         schemaUtils.sync(objects)
-       }
-       catch (DDLException ex)
-       {
-           fail(ex.failMessage)
-       }       
+       if (!schemaUtils.sync(objects))
+           fail("DDL errors found")
    } 
    
    private void getLastSyncTime()

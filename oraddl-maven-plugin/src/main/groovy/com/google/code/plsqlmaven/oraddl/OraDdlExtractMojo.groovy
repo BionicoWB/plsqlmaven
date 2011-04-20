@@ -77,7 +77,7 @@ public class OraDdlExtractMojo
        sql.eachRow("""select object_name, 
                              object_type
                         from user_objects
-                       where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM') 
+                       where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW') 
                          and object_name not like 'SYS\\_%' escape '\\'"""+objectsFilter)
        {
            def type= it.object_type.toLowerCase()

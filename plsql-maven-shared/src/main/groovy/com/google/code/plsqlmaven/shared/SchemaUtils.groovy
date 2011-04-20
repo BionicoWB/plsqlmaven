@@ -18,6 +18,8 @@ package com.google.code.plsqlmaven.shared;
 
 import groovy.sql.Sql
 import java.io.File
+import java.sql.SQLException
+import com.google.code.plsqlmaven.oraddl.helpers.DDLException;
 
 
 /**
@@ -74,10 +76,12 @@ public class SchemaUtils
 
     }
     
-    public void sync(objects)
+    public boolean sync(objects)
     {
-       def order= ['table','index','sequence','synonym']
+       def order= ['table','index','sequence','synonym','view']
        def parser= new XmlParser();
+       def success= true;
+       def delayedChanges= [];
        
        order.each
        {
@@ -86,22 +90,67 @@ public class SchemaUtils
            objects[type].each
            {
                object ->
-               def helper= getHelper(type);
-               if (helper)
+               
+               try
                {
-                   log.info "sync ${type} ${object.name}"
-                   def xml= parser.parse(object.file);
-                   
-                   if (helper.exists(xml))
+                   def helper= getHelper(type);
+                   if (helper)
                    {
-                       def changes= helper.detectChanges(xml)
-                       applyChanges(helper,changes);
+                       log.info "sync ${type} ${object.name}"
+                       def xml= parser.parse(object.file);
+                       
+                       if (helper.exists(xml))
+                       {
+                           def changes= helper.detectChanges(xml)
+                           
+                           // delay foreign keys
+                           def reordered= changes.clone()
+                           def delayed= []
+                           for (change in changes)
+                           {
+                               if (change.constraint?.'@type'=='foreign'||change.references)
+                               {
+                                   reordered.remove(change)
+                                   delayed << change
+                               }
+                           }
+                           
+                           applyChanges(helper,reordered);
+                           delayedChanges << ['helper': helper, 'changes': delayed]
+                       }
+                       else
+                           helper.create(xml);
                    }
-                   else
-                       helper.create(xml);
                }
+               catch (DDLException dex)
+               {
+                   log.error dex.failMessage
+               }
+               catch (SQLException ex)
+               {
+                   log.error ex.message
+                   success= false;
+               }
+               
            }
        }
+       
+       try
+       {
+           for (delayed in delayedChanges)
+             applyChanges(delayed.helper,delayed.changes);
+       }
+       catch (DDLException dex)
+       {
+           log.error dex.failMessage
+       }
+       catch (SQLException ex)
+       {
+           log.error ex.message
+           success= false;
+       }
+
+       return success;
     }
     
     public getHelper(type)

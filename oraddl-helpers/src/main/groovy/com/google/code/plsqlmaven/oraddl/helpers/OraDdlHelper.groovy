@@ -79,7 +79,7 @@ abstract class OraDdlHelper
            data_length= col.'@precision'
           else
           if (col.'@scale')
-           data_length= col.'@scale'
+           data_length= '*,'+col.'@scale'
           else
           if (col.'@length')
            data_length= col.'@length'
