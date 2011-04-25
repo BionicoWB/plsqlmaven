@@ -92,7 +92,7 @@ public class OraDdlExtractMojo
        if (objects)
          objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
 
-       if (type)
+       if (types)
          typeFilter= " and object_type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
          
        if (existing)
