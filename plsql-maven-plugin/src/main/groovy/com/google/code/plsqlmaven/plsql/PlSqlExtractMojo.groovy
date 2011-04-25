@@ -35,11 +35,11 @@ public class PlSqlExtractMojo
    private String objects;
 
   /**
-   * The type (package,procedure... etc) of objects to extract
+   * A comma separated list of types (package,procedure... etc) of objects to extract
    * @since 1.8
-   * @parameter expression="${type}"
+   * @parameter expression="${types}"
    */
-   private String type;
+   private String types;
 
    /**
    * Whether to extract objects already in the project
@@ -91,8 +91,8 @@ public class PlSqlExtractMojo
         if (objects)
             objectsFilter= " and name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
         
-        if (type)
-            typeFilter= " and type = '${type.toUpperCase()}'"
+        if (types)
+            typeFilter= " and type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
          
         if (existing)
             existingFilter= buildExistingFilter()

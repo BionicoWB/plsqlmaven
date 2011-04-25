@@ -36,11 +36,11 @@ public class OraDdlExtractMojo
    private String objects;
 
    /**
-    * The type (table,sequence... etc) of objects to extract
+    * A comma separated list of types (table,sequence... etc) of objects to extract
     * @since 1.8
-    * @parameter expression="${type}"
+    * @parameter expression="${types}"
     */
-   private String type;
+   private String types;
 
   /**
    * Whether to force extraction even if the sources directory already exists
@@ -93,7 +93,7 @@ public class OraDdlExtractMojo
          objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
 
        if (type)
-         typeFilter= " and object_type = '${type.toUpperCase()}'"
+         typeFilter= " and object_type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
          
        if (existing)
          existingFilter= buildExistingFilter()
