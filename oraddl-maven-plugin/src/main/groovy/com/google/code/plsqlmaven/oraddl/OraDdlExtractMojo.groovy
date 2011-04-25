@@ -16,6 +16,8 @@ package com.google.code.plsqlmaven.oraddl
  * limitations under the License.
  */
 
+import org.apache.maven.plugin.logging.Log;
+
 import groovy.xml.MarkupBuilder
 
 /**
@@ -26,12 +28,19 @@ import groovy.xml.MarkupBuilder
 public class OraDdlExtractMojo
     extends OraDdlMojo
 {
-    /**
+   /**
     * A comma separated list of object names to extract
     * @since 1.0
     * @parameter expression="${objects}"
     */
    private String objects;
+
+   /**
+    * The type (table,sequence... etc) of objects to extract
+    * @since 1.0
+    * @parameter expression="${type}"
+    */
+   private String type;
 
   /**
    * Whether to force extraction even if the sources directory already exists
@@ -39,6 +48,13 @@ public class OraDdlExtractMojo
    * @parameter expression="${force}"
    */
    private boolean force;
+
+  /**
+   * Whether to extract objects already in the project 
+   * @since 1.0
+   * @parameter expression="${existing}"
+   */
+   private boolean existing;
 
    void execute()
    {
@@ -70,15 +86,26 @@ public class OraDdlExtractMojo
    private createSources()
    {
        def objectsFilter= '';
+       def typeFilter= '';
+       def existingFilter= '';
        
        if (objects)
          objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
 
-       sql.eachRow("""select object_name, 
-                             object_type
-                        from user_objects
-                       where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW') 
-                         and object_name not like 'SYS\\_%' escape '\\'"""+objectsFilter)
+       if (type)
+         typeFilter= " and object_type = '${type.toUpperCase()}'"
+         
+       if (existing)
+         existingFilter= buildExistingFilter()
+
+       def objectsQuery="""select object_name, 
+                                  object_type
+                             from user_objects
+                            where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW') 
+                              and object_name not like 'SYS\\_%' escape '\\'"""+objectsFilter+typeFilter+existingFilter;
+                              
+       log.debug objectsQuery                                  
+       sql.eachRow(objectsQuery)
        {
            def type= it.object_type.toLowerCase()
            def name= it.object_name.toLowerCase()
@@ -98,6 +125,29 @@ public class OraDdlExtractMojo
              log.info "extracted ${sourceFilePath}"
            
        }
+   }
+   
+   public String buildExistingFilter()
+   {
+       def scanner=  ant.fileScanner
+       {
+           fileset(dir: sourceDirectory)
+           {
+               include(name: '**/*.xml')
+           }
+       }
+
+       def objects= []
+       
+       for (file in scanner)
+       {
+           def path= file.absolutePath.split(File.separator)
+           def type= path[path.length-2]
+           def name= path[path.length-1].split('\\.')[0]
+           objects << ['name': name, 'type': type]
+       }
+       
+       return ' and ('+objects.collect{ object -> "(object_name= '${object.name.toUpperCase()}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
    }
    
 }
