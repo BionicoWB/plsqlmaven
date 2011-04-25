@@ -37,7 +37,7 @@ public class OraDdlExtractMojo
 
    /**
     * The type (table,sequence... etc) of objects to extract
-    * @since 1.0
+    * @since 1.8
     * @parameter expression="${type}"
     */
    private String type;
@@ -51,7 +51,7 @@ public class OraDdlExtractMojo
 
   /**
    * Whether to extract objects already in the project 
-   * @since 1.0
+   * @since 1.8
    * @parameter expression="${existing}"
    */
    private boolean existing;

@@ -35,6 +35,20 @@ public class PlSqlExtractMojo
    private String objects;
 
   /**
+   * The type (package,procedure... etc) of objects to extract
+   * @since 1.8
+   * @parameter expression="${type}"
+   */
+   private String type;
+
+   /**
+   * Whether to extract objects already in the project
+   * @since 1.8
+   * @parameter expression="${existing}"
+   */
+   private boolean existing;
+
+  /**
    * Whether to force extraction even if the sources directory already exists
    * @since 1.0
    * @parameter expression="${force}"
@@ -71,13 +85,23 @@ public class PlSqlExtractMojo
     private createSources()
     {
         def objectsFilter= '';
-        
+        def typeFilter= '';
+        def existingFilter= '';
+ 
         if (objects)
             objectsFilter= " and name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
         
-        log.debug objectsFilter
+        if (type)
+            typeFilter= " and type = '${type.toUpperCase()}'"
+         
+        if (existing)
+            existingFilter= buildExistingFilter()
+      
+        def objectsQuery= "select distinct type from user_source where name not like 'SYS_PLSQL_%' and type not like 'JAVA%'"+objectsFilter+typeFilter+existingFilter
+               
+        log.debug objectsQuery
             
-        sql.eachRow("select distinct type from user_source where name not like 'SYS_PLSQL_%' and type not like 'JAVA%'"+objectsFilter)
+        sql.eachRow(objectsQuery)
         {
             def type= it.type.toLowerCase();
             def ext= plsqlUtils.getTypeExt(type);
@@ -115,10 +139,24 @@ public class PlSqlExtractMojo
                }
             }
        
-            sql.eachRow("select distinct name from user_source where type= ${it.type}"+objectsFilter,
+            def typeQuery= "select distinct name from user_source where type= ${it.type}"+objectsFilter+existingFilter
+            log.debug typeQuery
+            sql.eachRow(typeQuery,
                         things_to_do_to_extract_this_type)
         }
         
+    }
+    
+    private buildExistingFilter()
+    {
+        def files= getPlsqlSourceFiles()
+        
+        def objects= [];
+        
+        for (file in files)
+          objects << getSourceDescriptor(file)
+          
+        return ' and ('+objects.collect{ object -> "(name= '${object.name.toUpperCase()}' and type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
     }
 
     private extract(name,type,file)
