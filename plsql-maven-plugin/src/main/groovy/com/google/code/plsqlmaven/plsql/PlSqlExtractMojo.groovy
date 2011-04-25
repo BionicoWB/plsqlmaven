@@ -77,7 +77,7 @@ public class PlSqlExtractMojo
         
         log.debug objectsFilter
             
-        sql.eachRow("select distinct type from user_source where name not like 'SYS_PLSQL_%'"+objectsFilter)
+        sql.eachRow("select distinct type from user_source where name not like 'SYS_PLSQL_%' and type not like 'JAVA%'"+objectsFilter)
         {
             def type= it.type.toLowerCase();
             def ext= plsqlUtils.getTypeExt(type);
