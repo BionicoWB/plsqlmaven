@@ -4,7 +4,7 @@
     <parent>            
             <groupId>com.google.code.plsqlmaven</groupId>
             <artifactId>plsql-maven-project</artifactId>
-            <version>1.8-SNAPSHOT</version>
+            <version>1.8</version>
     </parent>
 
   <groupId>com.google.code.plsqlmaven</groupId>
@@ -37,7 +37,7 @@
 		<dependency>
 			<groupId>com.google.code.plsqlmaven</groupId>
 			<artifactId>plsql-webapp-deployer</artifactId>
-			<version>1.8-SNAPSHOT</version>
+			<version>1.8</version>
 		</dependency>
         </dependencies>
   </dependencyManagement>
