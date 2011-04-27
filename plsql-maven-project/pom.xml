@@ -22,7 +22,7 @@
         <plugin>
             <groupId>com.google.code.plsqlmaven</groupId>
             <artifactId>oraddl-maven-plugin</artifactId>
-            <version>${project.version}</version>
+            <version>1.9-SNAPSHOT</version>
 
             <dependencies>
                                 <dependency>
@@ -59,7 +59,7 @@
         <plugin>
             <groupId>com.google.code.plsqlmaven</groupId>
             <artifactId>plsql-maven-plugin</artifactId>
-            <version>${project.version}</version>
+            <version>1.9-SNAPSHOT</version>
 
             <dependencies>
                                 <dependency>
@@ -96,7 +96,7 @@
         <plugin>
             <groupId>com.google.code.plsqlmaven</groupId>
             <artifactId>xdb-maven-plugin</artifactId>
-            <version>${project.version}</version>
+            <version>1.9-SNAPSHOT</version>
 
             <dependencies>
                                 <dependency>
