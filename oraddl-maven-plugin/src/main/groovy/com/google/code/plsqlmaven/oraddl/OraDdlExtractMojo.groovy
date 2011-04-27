@@ -147,7 +147,11 @@ public class OraDdlExtractMojo
            objects << ['name': name, 'type': type]
        }
        
-       return ' and ('+objects.collect{ object -> "(object_name= '${object.name.toUpperCase()}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
+       if (objects.size()>0)
+         return ' and ('+objects.collect{ object -> "(object_name= '${object.name.toUpperCase()}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
+       else
+         return ' and 1=0'
+
    }
    
 }

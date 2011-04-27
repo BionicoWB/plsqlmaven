@@ -33,7 +33,7 @@ class TableHelper extends OraDdlHelper
           {
               xml.columns()
               {
-                  sql.eachRow("select * from user_tab_columns a where table_name = upper(${name})")
+                  sql.eachRow("select * from user_tab_columns a where table_name = upper(${name}) order by column_id")
                   {
                      def col= it.toRowResult()
                      def p= col.data_type.indexOf('(')
@@ -43,6 +43,7 @@ class TableHelper extends OraDdlHelper
                                 'precision':     col.data_precision,
                                 'scale':         col.data_scale,
                                 'length':        rd(col.char_length,0),
+                                'default':       (col.data_default?.trim()?.toLowerCase()=='null' ? null : col.data_default?.trim()),
                                 'primary':       simpleKey(col.column_name,constraints, 'P'),
                                 'unique':        simpleKey(col.column_name,constraints, 'U'),
                                 'check':         simpleCheck(col.column_name,constraints),
@@ -261,7 +262,8 @@ class TableHelper extends OraDdlHelper
                   if (dataType!=col.'@type'
                       ||!cmp(dbcol.data_precision,col.'@precision')
                       ||!cmp(dbcol.data_scale,col.'@scale')
-                      ||!cmp(dbcol.char_length,dv(col.'@length',0)))
+                      ||!cmp(dbcol.char_length,dv(col.'@length',0))
+                      ||!cmp((dbcol.data_default?.trim()?.toLowerCase()=='null' ? null : dbcol.data_default?.trim()),col.'@default'))
                     changes << [type: 'modify_column', column: columnName, columnType: getColumnType(col), table: tableName]
                     
                   if (col.'@primary'=='true'&&simpleKey(dbcol.column_name,dbconstraints, 'P')==null)

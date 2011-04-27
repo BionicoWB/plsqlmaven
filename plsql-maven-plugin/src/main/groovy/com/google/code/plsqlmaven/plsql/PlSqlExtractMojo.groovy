@@ -155,8 +155,11 @@ public class PlSqlExtractMojo
         
         for (file in files)
           objects << getSourceDescriptor(file)
-          
-        return ' and ('+objects.collect{ object -> "(name= '${object.name.toUpperCase()}' and type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
+        
+        if (objects.size()>0)
+         return ' and ('+objects.collect{ object -> "(name= '${object.name.toUpperCase()}' and type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
+        else
+         return ' and 1=0'
     }
 
     private extract(name,type,file)

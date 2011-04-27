@@ -86,6 +86,9 @@ abstract class OraDdlHelper
    
           if (data_length)
            type+='('+data_length+')'
+           
+          if (col.'@default')
+           type+=' default '+col.'@default'
    
           return type
       }
