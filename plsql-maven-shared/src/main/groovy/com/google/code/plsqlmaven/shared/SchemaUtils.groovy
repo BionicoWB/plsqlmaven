@@ -20,6 +20,9 @@ import groovy.sql.Sql
 import java.io.File
 import java.sql.SQLException
 import com.google.code.plsqlmaven.oraddl.helpers.DDLException;
+import java.io.File;
+import groovy.xml.MarkupBuilder
+
 
 
 /**
@@ -46,20 +49,30 @@ public class SchemaUtils
         this.username= sql.firstRow("select user from dual").user
     }
     
+    public SchemaUtils(ant,log)
+    {
+        this.ant= ant;
+        this.log= log;
+    }
+    
+    public void setSql(sql)
+    {
+        this.sql= sql;
+        this.username= sql.firstRow("select user from dual").user
+    }
+
     public void syncDirectory(dir)
     {
-        if (!new File(dir).exists())
+       if (!new File(dir).exists())
         return;
 
-      def cnt= 0;
-      
-      def scanner=  ant.fileScanner
-      {
+       def scanner=  ant.fileScanner
+       {
           fileset(dir: dir)
           {
                include(name: '**/*.xml')
           }
-      }
+       }
 
        def objects= [:]
        
@@ -79,13 +92,17 @@ public class SchemaUtils
     public boolean sync(objects)
     {
        def order= ['table','index','sequence','synonym','view']
-       def parser= new XmlParser();
-       def success= true;
-       def delayedChanges= [];
+       def parser= new XmlParser()
+       def success= true
+       def changes= []
+       def helpers= []
        
        order.each
        {
            type ->
+           
+           def helper= getHelper(type)
+           helpers << helper
            
            objects[type].each
            {
@@ -93,64 +110,65 @@ public class SchemaUtils
                
                try
                {
-                   def helper= getHelper(type);
-                   if (helper)
-                   {
                        log.info "sync ${type} ${object.name}"
-                       def xml= parser.parse(object.file);
+                       def target= parser.parse(object.file)
                        
-                       if (helper.exists(xml))
-                       {
-                           def changes= helper.detectChanges(xml)
-                           
-                           // delay foreign keys
-                           def reordered= changes.clone()
-                           def delayed= []
-                           for (change in changes)
-                           {
-                               if (change.constraint?.'@type'=='foreign'||change.references)
-                               {
-                                   reordered.remove(change)
-                                   delayed << change
-                               }
-                           }
-                           
-                           applyChanges(helper,reordered);
-                           delayedChanges << ['helper': helper, 'changes': delayed]
-                       }
+                       if (!helper.exists(target))
+                          changes+= ensureList(helper.create(target))
                        else
-                           helper.create(xml);
-                   }
-               }
-               catch (DDLException dex)
-               {
-                   log.error dex.failMessage
+                       {
+                          def source= extractXml(parser,helper,object.name)
+                          changes+= ensureList(helper.detectChanges(source,target))
+                       }
                }
                catch (SQLException ex)
                {
                    log.error ex.message
-                   success= false;
+                   success= false
                }
                
            }
        }
        
-       try
+       helpers.each
        {
-           for (delayed in delayedChanges)
-             applyChanges(delayed.helper,delayed.changes);
+           helper ->
+           
+           changes= helper.reorder(changes)
        }
-       catch (DDLException dex)
+       
+       changes.each
        {
-           log.error dex.failMessage
+           change ->
+           
+           log.debug change.toString()
+           
+           try
+           {
+                 sql.execute change.ddl.toString() 
+           }
+           catch (SQLException ex)
+           {
+               log.error ex.message
+               success= false
+           }
        }
-       catch (SQLException ex)
-       {
-           log.error ex.message
-           success= false;
-       }
-
-       return success;
+       
+       return success
+    }
+    
+    public extractXml(parser,helper,name)
+    {
+        StringWriter writer= new StringWriter(file)
+        writer.write('<?xml version="1.0" encoding="UTF-8"?>'+"\n")
+        def xml = new MarkupBuilder(writer)
+        xml.omitNullAttributes = true
+        xml.doubleQuotes = true
+ 
+        if (!schemaUtils.getHelper(type)?.extract(name,xml))
+          return null
+        else
+          return parser.parse(xml.toString())
     }
     
     public getHelper(type)
@@ -187,4 +205,42 @@ public class SchemaUtils
             }
     }
  
+    public static getSourceDescriptor(File source)
+    {
+        def path= source.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
+        def type= path[path.length-2]
+        def name= path[path.length-1].split('\\.')[0]
+        return ['name': name, 'type': type, 'file': source]
+    }
+    
+    public getSchemaSourceFiles(dir)
+    {
+        
+        if (!new File(dir).exists())
+         return [];
+
+        def scanner=  ant.fileScanner
+        {
+           fileset(dir: dir)
+           {
+               include(name: '**/*.xml')
+           }
+        }
+         
+        def files= []
+        
+        for (file in scanner)
+           files << file
+           
+        return files;
+    }
+    
+    private ensureList(o)
+    {
+        if (o instanceof List)
+          return o;
+        else
+          return [o];
+    }
+    
 }

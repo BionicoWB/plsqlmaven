@@ -64,7 +64,7 @@ public abstract class OraDdlMojo
     /**
      * Utilities for schema handling
      */
-    protected SchemaUtils schemaUtils;
+    protected SchemaUtils schemaUtils= new SchemaUtils(ant,log);
     
     public void disconnectFromDatabase()
     {
@@ -78,7 +78,7 @@ public abstract class OraDdlMojo
         {
             log.debug "connecting to " + url 
             sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
-            schemaUtils= new SchemaUtils(ant,log,sql)
+            schemaUtils.setSql(sql);
         }
         else
             sql= null;
@@ -94,6 +94,16 @@ public abstract class OraDdlMojo
        return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema"+File.separator;
     }
     
+    public getSchemaSourceFiles()
+    {
+        return schemaUtils.getSchemaSourceFiles(sourceDirectory)
+    }
+
+    public getSourceDescriptor(File source)
+    {
+       return schemaUtils.getSourceDescriptor(source);
+    }
+
     public String path(p)
     {
         return p.replace('/',File.separator)

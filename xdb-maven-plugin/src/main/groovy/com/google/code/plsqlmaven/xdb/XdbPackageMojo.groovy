@@ -30,6 +30,9 @@ public class XdbPackageMojo
     
     void execute()
     {
+        if (!new File(xdbSourceDirectory).exists())
+        return;
+
         def xdbOutputDirectory= project.build.outputDirectory+File.separator+"xdb"
         
         if (project.getPackaging()=='war')

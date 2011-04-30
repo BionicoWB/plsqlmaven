@@ -60,34 +60,35 @@ class SynonymHelper extends OraDdlHelper
           if (synonym.'@db-link')
             ddl+= '@'+synonym.'@db-link'
    
-          doddl(ddl,"You need to: grant create synonym to ${username}")
+          return [ 
+                          type: 'create_synonym',
+                           ddl: ddl,
+                   privMessage: "You need to: grant create synonym to ${username}"
+                 ]
       }
       
-      public List detectChanges(synonym)
+      public drop(synonym)
+      {
+          return [ 
+                          type: 'drop_synonym',
+                           ddl: "drop synonym ${synonym.'@name'}",
+                   privMessage: "You need to: grant drop synonym to ${username}"
+                 ]
+      }
+
+      public List detectChanges(source,target)
       {
           def changes= []
           
-          sql.eachRow("select a.*, user current_user from user_synonyms a where synonym_name= upper(${synonym.'@name'})")
+          if (!cmp(source,target,'for-owner',username)
+            ||!cmp(source,target,'for')
+            ||!cmp(source,target,'db-link'))
           {
-             def dbsyn= it.toRowResult()
-             
-             if (!cmp(dv(synonym.'@for-owner',dbsyn.current_user.toLowerCase()),dbsyn.table_owner.toLowerCase())
-               ||!cmp(synonym.'@for',dbsyn.table_name.toLowerCase())
-               ||!cmp(synonym.'@db-link',dbsyn.db_link?.toLowerCase()))
-               changes << [type: 'synonym_change', synonym: synonym]
+            changes << drop(source)
+            changes << create(target)
           }
-          
+             
           return changes
       }
       
-      /*   CHANGES    */
-      
-      public synonym_change(change)
-      {
-            doddl("drop synonym ${change.synonym.'@name'}",
-                   "You need to: grant drop synonym to ${username}")
-            
-            create(change.synonym)
-      }
-   
 }

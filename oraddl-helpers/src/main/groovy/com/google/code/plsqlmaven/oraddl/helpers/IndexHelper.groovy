@@ -83,74 +83,70 @@ class IndexHelper extends OraDdlHelper
       
       public create(index)
       {
-          doddl("create"+(index.'@unique'=='true' ? ' unique' : '')+" index ${index.'@name'} on "+index.'@table'+"("+index.columns.column.collect{ if (it.'@name') return it.'@name' else return it.'@expression' }.join(',')+")",
-                "You need to: grant create index to ${username}")
+          def ddl= "create"+(index.'@unique'=='true' ? ' unique' : '')+" index ${index.'@name'} on "+
+                        "${index.'@table'} ("+
+                        index.columns.column.
+                         collect{ indexPart(it) }.
+                         join(',')+
+                        ")"
+                        
+          return [ 
+                          type: 'create_index', 
+                           ddl: ddl,
+                   privMessage: "You need to: grant create index to ${username}" 
+                 ];
       }
       
-      public List detectChanges(index)
+      public drop(index)
+      {
+          return [ 
+                          type: 'drop_index', 
+                           ddl: "drop index ${index.'@name'}",
+                   privMessage: "You need to: grant drop index to ${username}" 
+                 ];
+      }
+      
+      public List detectChanges(source,target)
       {
           def changes= [];
-          def cnt= 0;
           
-          def indexName= index.'@name'
-          def existingCols= []
-          
-          sql.eachRow("""select index_name,
-                                table_name, 
-                                uniqueness
-                           from user_indexes
-                          where index_name= upper(${indexName})""")
+          def recreate_index=          
           {
-              def dbidx= it.toRowResult()
-              
-              if (index.'@table'!=dbidx.table_name.toLowerCase())
-              {
-                  changes << [type: 'index_change', index: index]
-                  return;
-              }
+              changes << drop(source)
+              changes << create(target)
+          }
 
-              if (dv(index.'@unique','false')!=(dbidx.uniqueness=='UNIQUE' ? 'true' : 'false'))
-              {
-                  changes << [type: 'index_change', index: index]
-                  return;
-              }
-          }
-          
-          sql.eachRow("""select a.column_name,
-                                b.column_expression,
-                                a.descend
-                           from user_ind_columns a,
-                                user_ind_expressions b
-                          where b.column_position(+)= a.column_position
-                            and b.index_name(+)= a.index_name
-                            and a.index_name= upper(${indexName})
-                       order by a.column_position""")
+          if (  !cmp(source,target,'table')
+              ||!cmp(source,target,'unique','false')
+              || source.columns.column.size()!=target.columns.column.size())
+            recreate_index();
+          else
           {
-              def dbcol= it.toRowResult()
-              def col= index.columns.column[cnt++]
-              if (!col
-                  ||dv(col.'@expression',col.'@name')!= dv(dbcol.column_expression?.replace('"',''),dbcol.column_name).toLowerCase()
-                  ||dv(col.'@direction','asc')!=dv(dbcol.descend,'asc')?.toLowerCase())
+              def equals= true;
+              
+              source.columns.column.eachWithIndex
               {
-                  changes << [type: 'index_change', index: index]
-                  return;
+                    sourceCol, index -> 
+                    
+                    def targetCol= target.columns.column[index]; 
+                    
+                    if (  !cmp(indexPart(sourceCol),indexPart(targetCol))
+                        ||!cmp(sourceCol,targetCol,'direction','asc'))
+                    {
+                      equals= false
+                      return
+                    }
               }
+              
+              if (!equals)
+                recreate_index();
           }
-          
-          // column added
-          if (changes.size()==0&&index.columns.column[cnt++])
-            changes << [type: 'index_change', index: index]
           
           return changes
       }
       
-      /*   CHANGES    */
-      
-   public index_change(change)
-   {
-         doddl("drop index ${change.index.'@name'}",
-               "You need to: grant drop index to ${username}")
-         create(change.index)
-   }
-   
+      private indexPart(col)
+      {
+          return (col.'@name' ? col.'@name' : col.'@expression');
+      }
 }

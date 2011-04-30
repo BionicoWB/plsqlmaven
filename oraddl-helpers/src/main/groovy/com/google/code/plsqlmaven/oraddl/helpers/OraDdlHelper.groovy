@@ -44,29 +44,15 @@ abstract class OraDdlHelper
           return (v ? v : d);
       }
       
-      public cmp(v1,v2)
+      public cmp(source,target,attr=null,dval=null)
       {
-          log.debug 'cmp: '+v1?.toString()+'=='+v2?.toString()
+          def v1= dv((attr ? source."@${attr}" : source),dval)
+          def v2= dv((attr ? target."@${attr}" : target),dval)
+          
+          //log.debug "@${attr} cmp: "+v1?.toString()+'=='+v2?.toString()
           return (v1?.toString()==v2?.toString());
       }
    
-      public doddl(ddl,privMessage)
-      {
-          log.info ddl
-          
-          try
-          {
-            sql.execute ddl.toString()
-          }
-          catch (Exception ex)
-          {
-              if (ex.errorCode==1031)
-                throw new DDLException(privMessage);
-              else
-                throw ex;
-          }
-      }
-      
       public getColumnType(col)
       {
           def type=col.'@type'
@@ -79,7 +65,7 @@ abstract class OraDdlHelper
            data_length= col.'@precision'
           else
           if (col.'@scale')
-           data_length= '*,'+col.'@scale'
+           data_length= (col.'@type'!='timestamp' ? '*,' : '')+col.'@scale'
           else
           if (col.'@length')
            data_length= col.'@length'
@@ -93,11 +79,16 @@ abstract class OraDdlHelper
           return type
       }
       
+      public reorder(changes)
+      {
+          return changes
+      }
+      
       public abstract boolean extract(name,xml);
 
       public abstract boolean exists(xml);
       
-      public abstract List detectChanges(xml);
+      public abstract detectChanges(source,target);
       
       public abstract create(xml);
 }

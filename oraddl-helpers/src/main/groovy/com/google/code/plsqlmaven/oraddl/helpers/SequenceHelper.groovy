@@ -92,128 +92,150 @@ class SequenceHelper extends OraDdlHelper
               ddl+=' cycle'
           }
           
-          doddl(ddl,"You need to: grant create sequence to ${username}")
+          return [    
+                           type: 'create_sequence',
+                            ddl: ddl, 
+                    privMessage: "You need to: grant create sequence to ${username}" 
+                 ]
       }
       
-      public List detectChanges(sequence)
+      public List detectChanges(source,target)
       {
           def changes= []
           
-          sql.eachRow("select * from user_sequences where sequence_name= upper(${sequence.'@name'})")
-          {
-             def dbseq= it.toRowResult()
-             def dbcache= (dbseq.cache_size==0 ? 'false' : dbseq.cache_size);
-                     
-             if (!cmp(dv(sequence.'@min-value',1),dv(dbseq.min_value,1)))
-                 changes << [type: 'sequence_minvalue', sequence: sequence.'@name', minvalue:  sequence.'@min-value']
-                 
-             if (!cmp(dv(sequence.'@max-value',999999999999999999999999999),dv(dbseq.max_value,999999999999999999999999999)))
-                 changes << [type: 'sequence_maxvalue', sequence: sequence.'@name', maxvalue:  sequence.'@max-value']
-   
-             if (!cmp(dv(sequence.'@increment-by',1),dv(dbseq.increment_by,1)))
-                 changes << [type: 'sequence_incrementby', sequence: sequence.'@name', incrementby:  sequence.'@increment-by']
-                 
-             if (!cmp(dv(sequence.'@cache',20),dv(dbcache,20)))
-                 changes << [type: 'sequence_cache', sequence: sequence.'@name', 'cache':  sequence.'@cache']
-   
-             if (!cmp(sequence.'@cycle',(dbseq.cycle_flag=='Y' ? 'true' : null)))
-                 changes << [type: 'sequence_cycle', sequence: sequence.'@name', 'cycle':  sequence.'@cycle']
-   
-             if (!cmp(sequence.'@order',(dbseq.order_flag=='Y' ? 'true' : null)))
-                 changes << [type: 'sequence_order', sequence: sequence.'@name', 'order':  sequence.'@order']
-          }
+          if (!cmp(source,target,'min-value',1))
+            changes << sequence_minvalue(target)
+             
+          if (!cmp(source,target,'max-value',999999999999999999999999999))
+            changes << sequence_maxvalue(target)
+           
+          if (!cmp(source,target,'increment-by',1))
+            changes << sequence_incrementby(target);
+             
+          if (!cmp(source,target,'cache',20))
+            changes << sequence_cache(target);
+           
+          if (!cmp(source,target,'cycle','false'))
+            changes << sequence_cycle(target);
+           
+          if (!cmp(source,target,'order','false'))
+            changes << sequence_order(target);
           
           return changes
       }
    
       /*   CHANGES    */
       
-      public sequence_minvalue(change)
+      public sequence_minvalue(sequence)
       {
           def ddl;
           
-          if (change.minvalue!=null)
-            ddl= "alter sequence ${change.sequence} minvalue ${change.minvalue}"
+          if (sequence.'@min-value'!=null)
+            ddl= "alter sequence ${sequence.'@name'} minvalue ${sequence.'@min-value'}"
           else
-            ddl= "alter sequence ${change.sequence} nominvalue"
+            ddl= "alter sequence ${sequence.'@name'} nominvalue"
             
-          doddl(ddl, "You need to: grant alter sequence to ${username}")
+          return [
+                            type: 'sequence_minvalue',
+                             ddl: ddl,
+                     privMessage: "You need to: grant alter sequence to ${username}"
+                 ]
    
       }
    
-      public sequence_maxvalue(change)
+      public sequence_maxvalue(sequence)
       {
           def ddl;
    
           if (change.maxvalue!=null)
-            ddl= "alter sequence ${change.sequence} maxvalue ${change.maxvalue}"
+            ddl= "alter sequence ${sequence.'@name'} maxvalue ${sequence.'@max-value'}"
           else
-            ddl= "alter sequence ${change.sequence} nomaxvalue"
+            ddl= "alter sequence ${sequence.'@name'} nomaxvalue"
    
-          doddl(ddl, "You need to: grant alter sequence to ${username}")
+          return [
+                            type: 'sequence_maxvalue',
+                             ddl: ddl,
+                     privMessage: "You need to: grant alter sequence to ${username}"
+                 ]
       }
    
-      public sequence_incrementby(change)
+      public sequence_incrementby(sequence)
       {
           def ddl;
    
-          if (change.incrementby!=null)
-            ddl= "alter sequence ${change.sequence} increment by ${change.incrementby}"
+          if (sequence.'@increment-by'!=null)
+            ddl= "alter sequence ${sequence.'@name'} increment by ${sequence.'@increment-by'}"
           else
-            ddl= "alter sequence ${change.sequence} increment by 1"
+            ddl= "alter sequence ${sequence.'@name'} increment by 1"
             
-          doddl(ddl, "You need to: grant alter sequence to ${username}")
+          return [
+                            type: 'sequence_incrementby',
+                             ddl: ddl,
+                     privMessage: "You need to: grant alter sequence to ${username}"
+                 ]
       }
    
-      public sequence_cache(change)
+      public sequence_cache(sequence)
       {
           def ddl;
           
-          if (change.cache!=null)
+          if (sequence.'@cache'!=null)
           {
-            if (change.cache=='false'||change.cache=='0')
-              ddl= "alter sequence ${change.sequence} nocache"
+            if (sequence.'@cache'=='false'||sequence.'@cache'=='0')
+              ddl= "alter sequence ${sequence.'@name'} nocache"
             else
-              ddl= "alter sequence ${change.sequence} cache ${change.cache}"
+              ddl= "alter sequence ${sequence.'@name'} cache ${sequence.'@cache'}"
           }
           else
-            ddl= "alter sequence ${change.sequence} cache 20"
+            ddl= "alter sequence ${sequence.'@name'} cache 20"
             
-          doddl(ddl, "You need to: grant alter sequence to ${username}")
+          return [
+                            type: 'sequence_cache',
+                             ddl: ddl,
+                     privMessage: "You need to: grant alter sequence to ${username}"
+                 ]
       }
    
-      public sequence_order(change)
+      public sequence_order(sequence)
       {
           def ddl;
           
-          if (change.order!=null)
+          if (sequence.'@order'!=null)
           {
-            if (change.order=='false')
-              ddl= "alter sequence ${change.sequence} noorder"
+            if (sequence.'@order'=='false')
+              ddl= "alter sequence ${sequence.'@name'} noorder"
             else
-              ddl= "alter sequence ${change.sequence} order"
+              ddl= "alter sequence ${sequence.'@name'} order"
           }
           else
-            ddl= "alter sequence ${change.sequence} noorder"
+            ddl= "alter sequence ${sequence.'@name'} noorder"
             
-          doddl(ddl, "You need to: grant alter sequence to ${username}")
+          return [
+                            type: 'sequence_order',
+                             ddl: ddl,
+                     privMessage: "You need to: grant alter sequence to ${username}"
+                 ]
       }
    
-      public sequence_cycle(change)
+      public sequence_cycle(sequence)
       {
           def ddl;
           
-          if (change.cycle!=null)
+          if (sequence.'@cycle'!=null)
           {
-            if (change.cycle=='false')
-              ddl= "alter sequence ${change.sequence} nocycle"
+            if (sequence.'@cycle'=='false')
+              ddl= "alter sequence ${sequence.'@name'} nocycle"
             else
-              ddl= "alter sequence ${change.sequence} cycle"
+              ddl= "alter sequence ${sequence.'@name'} cycle"
           }
           else
-            ddl= "alter sequence ${change.sequence} nocycle"
+            ddl= "alter sequence ${sequence.'@name'} nocycle"
    
-          doddl(ddl, "You need to: grant alter sequence to ${username}")
+          return [
+                            type: 'sequence_cycle',
+                             ddl: ddl,
+                     privMessage: "You need to: grant alter sequence to ${username}"
+                 ]
       }
       
    

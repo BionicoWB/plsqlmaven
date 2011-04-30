@@ -19,4 +19,9 @@ package com.google.code.plsqlmaven.oraddl.helpers
 class ContextException extends Exception
 {
     public context
+    
+    public ContextException(context)
+    {
+        this.context= context
+    }
 }

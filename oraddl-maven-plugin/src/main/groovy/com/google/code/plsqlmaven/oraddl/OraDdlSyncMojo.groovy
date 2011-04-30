@@ -82,7 +82,7 @@ public class OraDdlSyncMojo
        for (file in scanner)
        {
            if (changedOnly&&file.lastModified()<lastSyncTime) continue;
-           def path= file.absolutePath.split(File.separator)
+           def path= file.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
            def type= path[path.length-2]
            def name= path[path.length-1].split('\\.')[0]
            if (!objects[type]) objects[type]= []

@@ -16,6 +16,8 @@ package com.google.code.plsqlmaven.oraddl
  * limitations under the License.
  */
 
+import java.io.FileWriter;
+
 import org.apache.maven.plugin.logging.Log;
 
 import groovy.xml.MarkupBuilder
@@ -120,7 +122,10 @@ public class OraDdlExtractMojo
            xml.doubleQuotes = true
     
            if (!schemaUtils.getHelper(type)?.extract(name,xml))
+           {
+             writer.close()
              file.delete()
+           }
            else
              log.info "extracted ${sourceFilePath}"
            
@@ -141,7 +146,7 @@ public class OraDdlExtractMojo
        
        for (file in scanner)
        {
-           def path= file.absolutePath.split(File.separator)
+           def path= file.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
            def type= path[path.length-2]
            def name= path[path.length-1].split('\\.')[0]
            objects << ['name': name, 'type': type]

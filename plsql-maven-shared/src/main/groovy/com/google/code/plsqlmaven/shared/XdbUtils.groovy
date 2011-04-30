@@ -59,11 +59,13 @@ public class XdbUtils
     
     public boolean createResource(String path, InputStream contentStream)
     {
+        def xdbPath= path.replaceAll('\\\\','/');
+         
         // ensure xdb folder exists
-        def fsli= path.lastIndexOf(File.separator);
+        def fsli= xdbPath.lastIndexOf('/');
         if (fsli!=-1)
         {
-           def xdbFolder= path.substring(0,fsli)
+           def xdbFolder= xdbPath.substring(0,fsli)
            mkDir(xdbFolder)
         }
 
@@ -80,13 +82,13 @@ public class XdbUtils
                     begin
                     
                         begin
-                          dbms_xdb.deleteresource(${path});
+                          dbms_xdb.deleteresource(${xdbPath});
                         exception
                          when others then
                            null; -- ignore
                         end;
                         
-                        if dbms_xdb.createresource(${path},${content}) then
+                        if dbms_xdb.createresource(${xdbPath},${content}) then
                            v_dummy:= 1;
                         end if;
                         

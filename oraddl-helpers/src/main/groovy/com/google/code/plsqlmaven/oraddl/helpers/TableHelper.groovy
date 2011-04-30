@@ -17,9 +17,12 @@ package com.google.code.plsqlmaven.oraddl.helpers
  */
 
 import groovy.sql.Sql
+import java.sql.SQLException
 
 class TableHelper extends OraDdlHelper
 {
+      private static tempColIndex= 99999999999999999999999999;
+      
       public TableHelper(sql,log,username)
       {
           super(sql,log,username);
@@ -103,7 +106,7 @@ class TableHelper extends OraDdlHelper
       {
           def constraints= []
           
-          sql.eachRow("select * from user_constraints a where table_name = upper(${tableName})")
+          sql.eachRow("select * from user_constraints a where table_name = upper(${tableName}) order by constraint_type")
           {
              def cons= it.toRowResult()
              cons['columns']= []
@@ -230,208 +233,152 @@ class TableHelper extends OraDdlHelper
       
       public create(table)
       {
-          doddl('create table '+(table.'@name')+'('+table.columns.column.collect{ col-> col.'@name'+' '+getColumnType(col) }.join(',')+')',
-                "You need to: grant create table to ${username}")
-         
-          detectChanges(table).each{ "${it.type}"(it) }
-      }
-      
-      public List detectChanges(table)
-      {
-          def changes= [];
-          def cnt= 1;
+          def changes= []
           
-          def tableName= table.'@name'
-          def dbconstraints= getConstraints(tableName)
+          changes << [
+                              type: 'create_table',
+                               ddl: 'create table '+(table.'@name')+'('+table.columns.column.collect{ col-> col.'@name'+' '+getColumnType(col) }.join(',')+')',
+                       privMessage: "You need to: grant create table to ${username}"         
+                     ]
           
-          def existingCols= []
-          
-          sql.eachRow("select * from user_tab_columns where table_name = upper(${tableName}) order by column_id")
+          table.columns.column.each
           {
-              def dbcol= it.toRowResult()
-              def columnName= dbcol.column_name.toLowerCase()
-              def col= table.columns.column.find({ col -> col.'@name'== columnName })
-              def p= dbcol.data_type.indexOf('(')
-              def dataType= dbcol.data_type.toLowerCase().substring(0,(p==-1?dbcol.data_type.length():p))
-              existingCols << columnName
-                         
-              if (!col)
-                changes << [type: 'drop_column', column: columnName, table: tableName]
-              else
-              {
-                  if (dataType!=col.'@type'
-                      ||!cmp(dbcol.data_precision,col.'@precision')
-                      ||!cmp(dbcol.data_scale,col.'@scale')
-                      ||!cmp(dbcol.char_length,dv(col.'@length',0))
-                      ||!cmp((dbcol.data_default?.trim()?.toLowerCase()=='null' ? null : dbcol.data_default?.trim()),col.'@default'))
-                    changes << [type: 'modify_column', column: columnName, columnType: getColumnType(col), table: tableName]
-                    
-                  if (col.'@primary'=='true'&&simpleKey(dbcol.column_name,dbconstraints, 'P')==null)
-                      changes << [type:       'add_simple_primary',
-                                  table:      tableName,
-                                  column:     dbcol.column_name]
-                  else
-                  if (col.'@primary'==null&&simpleKey(dbcol.column_name,dbconstraints, 'P')=='true')
-                      changes << [type:       'drop_simple_primary',
-                                  table:      tableName,
-                                  column:     dbcol.column_name]
+              column ->
+              
+              if (column.'@primary'=='true')
+                add_simple_primary(table,column)
 
-                  if (col.'@unique'=='true'&&simpleKey(dbcol.column_name,dbconstraints, 'U')==null)
-                      changes << [type:       'add_simple_unique',
-                                  table:      tableName,
-                                  column:     dbcol.column_name]
-                  else
-                  if (col.'@unique'==null&&simpleKey(dbcol.column_name,dbconstraints, 'U')=='true')
-                      changes << [type:       'drop_simple_unique',
-                                  table:      tableName,
-                                  column:     dbcol.column_name]
+              if (column.'@not-null'=='true')
+                add_simple_notnull(table,column)
 
-                  if (col.'@check'!=null&&simpleCheck(dbcol.column_name,dbconstraints)==null)
-                      changes << [type:       'add_simple_check',
-                                  table:      tableName,
-                                  check:      col.'@check']
-                  else
-                  if (col.'@check'==null&&simpleCheck(dbcol.column_name,dbconstraints)!=null)
-                      changes << [type:                  'drop_simple_check',
-                                  table:                 tableName,
-                                  column:                dbcol.column_name]
-                  else
-                  if (col.'@check'!=simpleCheck(dbcol.column_name,dbconstraints))
-                      changes << [type:                 'change_simple_check',
-                                  table:                 tableName,
-                                  column:                dbcol.column_name,
-                                  check:                 col.'@check']
-    
-                  if (col.'@not-null'=='true'&&simpleNotNull(dbcol.column_name,dbconstraints)==null)
-                      changes << [type:       'add_simple_notnull',
-                                  table:      tableName,
-                                  column:     dbcol.column_name]
-                  else
-                  if (col.'@not-null'==null&&simpleNotNull(dbcol.column_name,dbconstraints)=='true')
-                      changes << [type:       'drop_simple_notnull',
-                                  table:      tableName,
-                                  column:     dbcol.column_name]
-                      
-                  if (col.'@references'!=null&&simpleForeignKey(dbcol.column_name,dbconstraints)==null)
-                      changes << [type:       'add_simple_foreign',
-                                  table:      tableName,
-                                  column:     col.'@name',
-                                  references: col.'@references']
-                  else
-                  if (col.'@references'==null&&simpleForeignKey(dbcol.column_name,dbconstraints)!=null)
-                      changes << [type:       'drop_simple_foreign',
-                                  table:      tableName,
-                                  column:     col.'@name',
-                                  references: col.'@references']
-                  else
-                  if (col.'@references'!=simpleForeignKey(dbcol.column_name,dbconstraints))
-                      changes << [type:       'change_simple_foreign',
-                                  table:      tableName,
-                                  column:     col.'@name',
-                                  references: col.'@references']
-    
-              }
+              if (column.'@unique'=='true')
+                add_simple_unique(table,column)
+                
+              if (column.'@references')
+                add_simple_foreign(table,column)
+
           }
           
-          changes+= table.columns.column.findAll{ c -> (!(c.'@name' in existingCols))}
-                                        .collect{ c -> [type:       'add_column',
-                                                        column:     c.'@name',
-                                                        columnType: getColumnType(c),
-                                                        table:      tableName] }
+          table.constraints.constraint.each
+          {
+              constraint ->
+              
+              changes << add_constraint(table,constraint)
+          }
           
+          return changes
+      }
+      
+      public detectChanges(source,target)
+      {
+          def changes= [];
           
-          dbconstraints.findAll{ c -> (!(c.constraint_name.toLowerCase() in table.constraints.constraint*.'@name')) }.each
+          target.columns.column.each
+          {
+                targetCol ->
+                
+                def sourceCol= source.columns.column.find({ col -> col.'@name'== targetCol.'@name' })
+                
+                if (!sourceCol)
+                    changes << add_column(target,targetCol)
+                else
+                {
+                    if (  !cmp(sourceCol,targetCol,'type')
+                        ||!cmp(sourceCol,targetCol,'precision')
+                        ||!cmp(sourceCol,targetCol,'scale')
+                        ||!cmp(sourceCol,targetCol,'length')
+                        ||!cmp(sourceCol,targetCol,'default'))
+                      changes += modify_column(target,targetCol,sourceCol)
+                    
+                    if (!cmp(sourceCol,targetCol,'primary','false'))
+                      changes << modify_simple_primary(target,targetCol,sourceCol)
+
+                    if (!cmp(sourceCol,targetCol,'unique','false'))
+                      changes << modify_simple_unique(target,targetCol,sourceCol)
+
+                    if (!cmp(sourceCol,targetCol,'check'))
+                      changes << modify_simple_check(target,targetCol,sourceCol)
+                      
+                    if (!cmp(sourceCol,targetCol,'not-null','false'))
+                      changes << modify_simple_notnull(target,targetCol,sourceCol)
+
+                    if (!cmp(sourceCol,targetCol,'references'))
+                      changes << modify_simple_foreign(target,targetCol,sourceCol)
+                }
+          }
+
+          
+          source.columns.column.findAll{ col -> (!(col.'@name' in target.columns.column*.'@name')) }.each
+          {
+              column ->
+              
+              changes << drop_column(target,column)
+          }
+          
+          source.constraints.constraint.findAll{ c -> (!(c.'@name' in target.constraints.constraint*.'@name')) }.each
           {
                 constraint ->
                  
-                changes << [type:       'drop_constraint',
-                            table:      tableName,
-                            constraint: constraint.constraint_name.toLowerCase()]
+                changes << drop_constraint(target,constraint);
           }
               
-          table.constraints.constraint.each
+          target.constraints.constraint.each
           {
-                 constraint ->
+                 targetCons ->
 
-                 try
-                 {
-                     def exit= new ContextException()
-                     exit.context= [type:       'constraint_change',
-                                    table:      tableName,
-                                    constraint: constraint];
-                                  
-                     def dbconstraint= dbconstraints.find{ c-> (c.constraint_name.toLowerCase()==constraint.'@name')} 
+                 def sourceCons= source.constraints.constraint.find{ c-> (c.'@name'==targetCons.'@name')} 
                      
-                     if (!dbconstraint)
-                        changes << [type:       'add_constraint',
-                                    table:      tableName,
-                                    constraint: constraint]
-                     else
+                 if (!sourceCons)
+                    changes << add_constraint(target,targetCons)
+                 else
+                 {
+                     try
                      {
-                        if (!(cmp(constraintType(dbconstraint.constraint_type),constraint.'@type')
-                            ||cmp(rd(dbconstraint.delete_rule?.toLowerCase(),'no action'),constraint.'@on-delete')
-                            ||cmp(dbconstraint.search_condition,constraint.'@expression')
-                            ||cmp(dbconstraint.rcolumns[0]?.owner,constraint.references[0]?.'@owner')
-                            ||cmp(dbconstraint.rcolumns[0]?.table_name,constraint.references[0]?.'@table')))
-                        {
-                            exit.context['cause']= 'base constraint metadata differs'
-                            throw exit
-                        }
+                        if (  !cmp(sourceCons,targetCons,'type')
+                            ||!cmp(sourceCons,targetCons,'on-delete','no action')
+                            ||!cmp(sourceCons,targetCons,'expression')
+                            ||!cmp(sourceCons.references[0]?.'@owner',targetCons.references[0]?.'@owner')
+                            ||!cmp(sourceCons.references[0]?.'@table',targetCons.references[0]?.'@table'))
+                            throw new ContextException('base metadata differs')
                         else
-                        if (constraint.'@type'!='check')
+                        if (targetCons.'@type'!='check')
                         {
-                            cnt= 0;
-                            
-                            dbconstraint.columns.each
-                            {
-                                dbcolumn -> 
-                                
-                                if (dbcolumn.column_name.toLowerCase()!=constraint.columns.column[cnt]?.'@name')
+                            if (sourceCons.columns.column.size()!=targetCons.columns.column.size())
+                                throw new ContextException('column count differs')
+                            else      
+                                targetCons.columns.column.eachWithIndex
                                 {
-                                    exit.context['cause']= 'columns order or names or count differs'
-                                    throw exit
-                                }
-                                
-                                cnt++;
-                            }
-                            
-                            if (constraint.columns.column[cnt])
-                            {
-                                exit.context['cause']= 'column count differs'
-                                throw exit
-                            }
-                               
-                            if (constraint.'@type'=='foreign')
-                            {
-                                cnt= 0;
-                                
-                                dbconstraint.rcolumns.each
-                                {
-                                    dbrcolumn ->
+                                    targetCol, index -> 
                                     
-                                    if (dbrcolumn.column_name.toLowerCase()!=constraint.references.column[cnt]?.'@name')
+                                    def sourceCol= sourceCons.columns.column[index];
+                                    
+                                    if (!cmp(sourceCol,targetCol,'name'))
+                                      throw new ContextException('columns differs')
+                                }
+                              
+                            if (targetCons.'@type'=='foreign')
+                            {
+                                if (sourceCons.references.column.size()!=targetCons.references.column.size())
+                                    throw new ContextException('referenced column count differs')
+                                else
+                                    targetCons.references.column.eachWithIndex
                                     {
-                                        exit.context['cause']= 'referenced columns order or names or count differs'
-                                        throw exit
+                                        targetCol, index ->
+                                        
+                                        def sourceCol= sourceCons.references.column[index];
+                                        
+                                        if (!cmp(sourceCol,targetCol,'name'))
+                                          throw new ContextException('referenced columns differs')
                                     }
-                                    
-                                    cnt++;
-                                }
-                                
-                                if (constraint.references.column[cnt])
-                                {
-                                    exit.context['cause']= 'referenced column count differs'
-                                    throw exit
-                                }
-                            }
+                             }
                         }
                      }
+                     catch (ContextException ex)
+                     {
+                         changes << modify_constraint(target,targetCons,ex.context)
+                     }
+                  }
                      
-                 }
-                 catch (ContextException ex)
-                 {
-                       changes << ex.context
-                 }
           }
           
           return changes
@@ -440,149 +387,242 @@ class TableHelper extends OraDdlHelper
       
       /*   CHANGES    */
       
-      public drop_column(change)
+      public drop_column(table,column)
       {
-          doddl("alter table ${change.table} drop column ${change.column}",
-                "You need to: grant alter table to ${username}")
+           return [
+                            type: 'drop_column',
+                             ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                     privMessage: "You need to: grant alter table to ${username}"
+                  ]
       }
    
-      public modify_column(change)
+      public modify_column(table,targetCol,sourceCol)
       {
-          doddl("alter table ${change.table} modify (${change.column} ${change.columnType})",
-                "You need to: grant alter table to ${username}")
-      }
-   
-      public add_column(change)
-      {
-          doddl("alter table ${change.table} add (${change.column} ${change.columnType})",
-                "You need to: grant alter table to ${username}")
-      }
-      
-      public add_constraint(change)
-      {
-          def ddl= "alter table ${change.table} add constraint ${change.constraint.'@name'} ";
+          def changes= []
           
-          if (change.constraint.'@type'=='primary')
-              ddl+="primary key ("+change.constraint.columns.column*.'@name'.join(',')+")"
-          else
-          if (change.constraint.'@type'=='foreign')
+          if (targetCol.'@type'=='varchar2'&&sourceCol.'@type'=='clob')
           {
-              ddl+="foreign key ("+change.constraint.columns.column*.'@name'.join(',')+")"
-              def owner= change.constraint.references[0].'@owner'
-              ddl+=" references "+( owner&&owner!=username ? owner+'.' : '' )+change.constraint.references[0].'@table'
-              ddl+='('+change.constraint.references.column*.'@name'.join(',')+')'
+              changes+= column_clob_to_varchar2(table,targetCol);
           }
           else
-          if (change.constraint.'@type'=='check')
-              ddl+="check ("+change.constraint.'@expression'+")"
+          if (targetCol.'@type'=='varchar2'&&sourceCol.'@type'=='number')
+          {
+              changes+= column_number_to_varchar2(table,targetCol);
+          }
           else
-          if (change.constraint.'@type'=='unique')
-              ddl+="unique ("+change.constraint.columns.column*.'@name'.join(',')+")"
+          if (targetCol.'@type'=='number'&&sourceCol.'@type'=='number'&&
+              ((!cmp(sourceCol,targetCol,'precision')
+                  &&(!(dv(targetCol.'@precision'.toInteger(),9999999)>dv(sourceCol.'@precision'.toInteger(),9999999))))
+              ||!cmp(sourceCol,targetCol,'scale',0)))
+          {
+              changes+= column_number_reduce_precision(table,targetCol);
+          }
+          else
+          {
+             def columnType= getColumnType(targetCol)
+             
+             changes+= [
+                                 type: 'modify_column',
+                                  ddl: "alter table ${table.'@name'} modify (${targetCol.'@name'} ${columnType})",
+                          privMessage: "You need to: grant alter table to ${username}"
+                       ]
+          }
+          
+          return changes
+      }
+   
+      public add_column(table,column)
+      {
+          def columnType= getColumnType(column)
+          
+          return [
+                                 type: 'add_column',
+                                  ddl: "alter table ${table.'@name'} add (${column.'@name'} ${columnType})",
+                          privMessage: "You need to: grant alter table to ${username}"
+                 ]
+          
+      }
+      
+      public add_constraint(table,constraint)
+      {
+          def ddl= "alter table ${table.'@name'} add constraint ${constraint.'@name'} ";
+          
+          if (constraint.'@type'=='primary')
+              ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"
+          else
+          if (constraint.'@type'=='foreign')
+          {
+              ddl+="foreign key ("+constraint.columns.column*.'@name'.join(',')+")"
+              def owner= constraint.references[0].'@owner'
+              ddl+=" references "+( owner&&owner!=username ? owner+'.' : '' )+constraint.references[0].'@table'
+              ddl+='('+constraint.references.column*.'@name'.join(',')+')'
+          }
+          else
+          if (constraint.'@type'=='check')
+              ddl+="check ("+constraint.'@expression'+")"
+          else
+          if (constraint.'@type'=='unique')
+              ddl+="unique ("+constraint.columns.column*.'@name'.join(',')+")"
 
           
-          doddl(ddl,"You need to: grant alter table to ${username}")
+          return [
+                         type: 'add_constraint',
+                          ddl: ddl,
+                  privMessage: "You need to: grant alter table to ${username}"
+                 ]
 
       }
    
-      public drop_constraint(change)
+      public drop_constraint(table,constraint)
       {
-          doddl("alter table ${change.table} drop constraint ${change.constraint}",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'drop_constraint',
+                               ddl: "alter table ${table.'@name'} drop constraint ${constraint.'@name'} cascade",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
       
-      public constraint_change(change)
+      public add_simple_primary(table,column)
       {
-          doddl("alter table ${change.table} drop constraint ${change.constraint.'@name'}",
-                "You need to: grant alter table to ${username}")
-          add_constraint(change);
+          return [
+                              type: 'add_constraint',
+                               ddl: "alter table ${table.'@name'} add primary key (${column.'@name'})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public add_simple_primary(change)
+      public drop_simple_primary(table,column)
       {
-          doddl("alter table ${change.table} add primary key (${change.column})",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'drop_constraint',
+                               ddl: "alter table ${table.'@name'} drop primary key cascade",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public drop_simple_primary(change)
+      public add_simple_unique(table,column)
       {
-          doddl("alter table ${change.table} drop primary key",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'add_constraint',
+                               ddl: "alter table ${table.'@name'} add unique (${column.'@name'})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public add_simple_unique(change)
+      public drop_simple_unique(table,column)
       {
-          doddl("alter table ${change.table} add unique (${change.column})",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'drop_constraint',
+                               ddl: """declare
+                                         v_constraint  varchar2(30);
+                                       begin
+                                         
+                                         select a.constraint_name
+                                           into v_constraint
+                                           from user_constraints a,
+                                                user_cons_columns b
+                                          where a.constraint_name= b.constraint_name
+                                            and a.table_name= b.table_name
+                                            and a.table_name= upper(${table.'@name'})
+                                            and b.column_name= upper(${column.'@name'})
+                                            and a.generated= 'GENERATED NAME'
+                                            and a.constraint_type= 'U'
+                                            and rownum < 2;
+                                         
+                                         execute immediate 'alter table ${table.'@name'} drop constraint '||v_constraint;
+                                         
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public drop_simple_unique(change)
+      public add_simple_check(table,column)
       {
-          doddl("alter table ${change.table} drop constraint "+sql.firstRow("""select a.constraint_name
-                                                                                 from user_constraints a,
-                                                                                      user_cons_columns b
-                                                                                where a.constraint_name= b.constraint_name
-                                                                                  and a.table_name= b.table_name
-                                                                                  and a.table_name= upper(${change.table})
-                                                                                  and b.column_name= upper(${change.column})
-                                                                                  and a.generated= 'GENERATED NAME'
-                                                                                  and a.constraint_type= 'U'""").constraint_name,
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'add_constraint',
+                               ddl: "alter table ${table.'@name'} add check (${column.'@name'})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public add_simple_check(change)
+      public drop_simple_check(table,column)
       {
-          doddl("alter table ${change.table} add check (${change.check})",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'drop_constraint',
+                               ddl: """declare
+                                         v_constraint  varchar2(30);
+                                       begin
+                                         
+                                           select a.constraint_name
+                                             into v_constraint
+                                             from user_constraints a,
+                                                  user_cons_columns b
+                                            where a.constraint_name= b.constraint_name 
+                                              and b.column_name= upper(${column.'@name'})
+                                              and a.table_name= b.table_name
+                                              and a.table_name= upper(${table.'@name'})
+                                              and a.generated= 'GENERATED NAME'
+                                              and a.constraint_type= 'C'
+                                              and (select count(*) 
+                                                     from user_cons_columns
+                                                    where constraint_name= a.constraint_name)= 1;
+                                         
+                                         execute immediate 'alter table ${table.'@name'} drop constraint '||v_constraint;
+                                         
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public drop_simple_check(change)
+      public modify_simple_check(table,column)
       {
-          doddl("alter table ${change.table} drop constraint "+sql.firstRow("""select a.constraint_name
-                                                                                 from user_constraints a,
-                                                                                      user_cons_columns b
-                                                                                where a.constraint_name= b.constraint_name 
-                                                                                  and b.column_name= upper(${change.column})
-                                                                                  and a.table_name= b.table_name
-                                                                                  and a.table_name= upper(${change.table})
-                                                                                  and a.generated= 'GENERATED NAME'
-                                                                                  and a.constraint_type= 'C'
-                                                                                  and (select count(*) 
-                                                                                         from user_cons_columns
-                                                                                        where constraint_name= a.constraint_name)= 1""").constraint_name,
-                "You need to: grant alter table to ${username}")
+          drop_simple_check(table,column)
+          add_simple_check(table,column)
       }
 
-      public change_simple_check(change)
+      public add_simple_notnull(table,column)
       {
-          drop_simple_check(change)
-          add_simple_check(change)
+          return [
+                              type: 'add_constraint',
+                               ddl: "alter table ${table.'@name'} add check (${column.'@name'} is not null)",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public add_simple_notnull(change)
+      public drop_simple_notnull(table,column)
       {
-          doddl("alter table ${change.table} add check (${change.column} is not null)",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'drop_constraint',
+                               ddl: """declare
+                                         v_constraint  varchar2(30);
+                                       begin
+                                         
+                                             for c_cur in (select a.constraint_name,
+                                                                  a.search_condition,
+                                                                  b.column_name
+                                                             from user_constraints a,
+                                                                  user_cons_columns b
+                                                            where a.constraint_name= b.constraint_name 
+                                                              and b.column_name= upper(${column.'@name'})
+                                                              and a.table_name= b.table_name
+                                                              and a.table_name= upper(${table.'@name'})
+                                                              and a.generated= 'GENERATED NAME'
+                                                              and a.constraint_type= 'C'
+                                                              and (select count(*) 
+                                                                     from user_cons_columns
+                                                                    where constraint_name= a.constraint_name)= 1)
+                                             loop
+                                              if c_cur.search_condition= '"'||c_cur.column_name||'" IS NOT NULL' then
+                                                execute immediate 'alter table ${table.'@name'} drop constraint '||c_cur.constraint_name;
+                                              end if;
+                                             end loop;
+                                         
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public drop_simple_notnull(change)
-      {
-          doddl("alter table ${change.table} drop constraint "+sql.rows("""select a.constraint_name,
-                                                                                  a.search_condition
-                                                                             from user_constraints a,
-                                                                                  user_cons_columns b
-                                                                            where a.constraint_name= b.constraint_name 
-                                                                              and b.column_name= upper(${change.column})
-                                                                              and a.table_name= b.table_name
-                                                                              and a.table_name= upper(${change.table})
-                                                                              and a.generated= 'GENERATED NAME'
-                                                                              and a.constraint_type= 'C'
-                                                                              and (select count(*) 
-                                                                                     from user_cons_columns
-                                                                                    where constraint_name= a.constraint_name)= 1""").find{ row -> isNotNullSearchCondition(row.search_condition,change.column)}.constraint_name,
-                "You need to: grant alter table to ${username}")
-      }
-
-      public add_simple_foreign(change)
+      public add_simple_foreign(table,column)
       {
           def ref= change.references.split('\\.')
           def references;
@@ -593,30 +633,284 @@ class TableHelper extends OraDdlHelper
           if (ref.length==2)
             references= ref[0]+'('+ref[1]+')'
           else
-            references= ref[0]+'('+change.column+')'
+            references= ref[0]+'('+column.'@name'+')'
   
-          doddl("alter table ${change.table} add foreign key (${change.column}) references ${references}",
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'add_constraint',
+                               ddl: "alter table ${table.'@name'} add foreign key (${column.'@name'}) references ${references}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public drop_simple_foreign(change)
+      public drop_simple_foreign(table,column)
       {
-          doddl("alter table ${change.table} drop constraint "+sql.firstRow("""select a.constraint_name
-                                                                                 from user_constraints a,
-                                                                                      user_cons_columns b
-                                                                                where a.constraint_name= b.constraint_name
-                                                                                  and a.table_name= b.table_name
-                                                                                  and a.table_name= upper(${change.table})
-                                                                                  and b.column_name= upper(${change.column})
-                                                                                  and a.generated= 'GENERATED NAME'
-                                                                                  and a.constraint_type= 'R'""").constraint_name,
-                "You need to: grant alter table to ${username}")
+          return [
+                              type: 'drop_constraint',
+                               ddl: """declare
+                                         v_constraint  varchar2(30);
+                                       begin
+                                         
+                                           select a.constraint_name
+                                             into v_constraint
+                                             from user_constraints a,
+                                                  user_cons_columns b
+                                            where a.constraint_name= b.constraint_name
+                                              and a.table_name= b.table_name
+                                              and a.table_name= upper(${table.'@name'})
+                                              and b.column_name= upper(${column.'@name'})
+                                              and a.generated= 'GENERATED NAME'
+                                              and a.constraint_type= 'R';
+                                                                                                                           
+                                         execute immediate 'alter table ${table.'@name'} drop constraint '||v_constraint;
+                                         
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
       }
 
-      public change_simple_foreign(change)
+      public modify_simple_foreign(table,column)
       {
           drop_simple_foreign(change)
           add_simple_foreign(change)
       }
+      
+      public column_clob_to_varchar2(table,column)
+      {
+          def changes= [];
+          def tempIndex= tempColIndex--;
+          def columnType= getColumnType(column);
+          
+          try
+          {
+             changes << [
+                             type: 'drop_maven_temporary_column',
+                         mainType: 'modify_column',
+                        tempIndex: tempIndex,
+                              ddl: "alter table ${table.'@name'} drop column mvn_${tempIndex}",
+                         failSafe: true
+                        ]
+          }
+          catch (Exception ex)
+          {}
+          
+          changes << [
+                              type: 'add_maven_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} add (mvn_${tempIndex} ${columnType})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          def target_length= column.'@length';
 
+          changes << [
+                              type: 'maven_translate_values_clob_to_varchar2',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: """declare
+                                          v_value ${columnType};
+                                          
+                                          function to_varchar2(p_old clob, p_length number, p_rowid varchar2)
+                                          return varchar2
+                                          as
+                                             v_length number:= dbms_lob.getlength(p_old);
+                                          begin
+                                          
+                                             if v_length > p_length then
+                                               raise_application_error(-20001,'Found a value longer than target column length: '||to_char(v_value)||' at rowid: '||p_rowid);
+                                             end if;
+                                             
+                                             return dbms_lob.substr(p_old,v_length,1);
+                                             
+                                          end;
+                                     begin
+                                          for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
+                                             v_value:= to_varchar2(c_cur.${column.'@name'},${target_length},c_cur.rwid);
+                                             update ${table.'@name'}
+                                                set mvn_${tempIndex}= v_value
+                                              where rowid= c_cur.rwid;
+                                          end loop;
+                                          commit;
+                                     end;
+                                   """
+                     ]
+          
+          changes << [
+                              type: 'maven_drop_column_after_data_migration',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+
+          changes << [
+                              type: 'maven_rename_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} rename column mvn_${tempIndex} to ${column.'@name'}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          return changes;
+      }
+      
+      private column_number_to_varchar2(table,column)
+      {
+          def changes= [];
+          def tempIndex= tempColIndex--;
+          def columnType= getColumnType(column);
+          
+          try
+          {
+             changes << [
+                             type: 'drop_maven_temporary_column',
+                         mainType: 'modify_column',
+                        tempIndex: tempIndex,
+                              ddl: "alter table ${table.'@name'} drop column mvn_${tempIndex}",
+                         failSafe: true
+                        ]
+          }
+          catch (Exception ex)
+          {}
+          
+          changes << [
+                              type: 'add_maven_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} add (mvn_${tempIndex} ${columnType})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          def target_length= column.'@length';
+
+          changes << [
+                              type: 'maven_translate_values_number_to_varchar2',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: """declare
+                                          v_value ${columnType};
+                                          
+                                          function to_varchar2(p_old number, p_length number, p_rowid varchar2)
+                                          return varchar2
+                                          as 
+                                             v_value varchar2(2000):= to_char(p_old);
+                                          begin
+                                          
+                                             if length(v_value) > p_length then
+                                               raise_application_error(-20001,'Found a value longer than target column length: '||to_char(v_value)||' at rowid: '||p_rowid);
+                                             end if;
+                                             
+                                             return v_value;
+                                             
+                                          end;
+                                     begin
+                                          for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
+                                             v_value:= to_varchar2(c_cur.${column.'@name'},${target_length},c_cur.rwid);
+                                             update ${table.'@name'}
+                                                set mvn_${tempIndex}= v_value
+                                              where rowid= c_cur.rwid;
+                                          end loop;
+                                          commit;
+                                     end;
+                                   """
+                     ]
+          
+          changes << [
+                              type: 'maven_drop_column_after_data_migration',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+
+          changes << [
+                              type: 'maven_rename_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} rename column mvn_${tempIndex} to ${column.'@name'}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          return changes;
+      }
+      
+      
+      private column_number_reduce_precision(table,column)
+      {
+          def changes= [];
+          def tempIndex= tempColIndex--;
+          def columnType= getColumnType(column);
+          
+          try
+          {
+             changes << [
+                             type: 'drop_maven_temporary_column',
+                         mainType: 'modify_column',
+                        tempIndex: tempIndex,
+                              ddl: "alter table ${table.'@name'} drop column mvn_${tempIndex}",
+                         failSafe: true
+                        ]
+          }
+          catch (Exception ex)
+          {}
+          
+          changes << [
+                              type: 'add_maven_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} add (mvn_${tempIndex} ${columnType})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          changes << [
+                              type: 'maven_column_reduce_number_precision',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: """declare
+                                          v_value ${columnType};
+                                          
+                                          function reduce_precision(p_old number, p_rowid varchar2)
+                                          return number
+                                          as
+                                             v_value ${columnType};
+                                          begin
+                                          
+                                             v_value:= p_old;
+                                             return v_value;
+                                          
+                                          exception
+                                           when others then
+                                             raise_application_error(-20001,'Found value incompatible with target column precision: '||to_char(v_value)||' at rowid: '||p_rowid);
+                                          end;
+                                     begin
+                                          for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
+                                             v_value:= reduce_precision(c_cur.${column.'@name'},c_cur.rwid);
+                                             update ${table.'@name'}
+                                                set mvn_${tempIndex}= v_value
+                                              where rowid= c_cur.rwid;
+                                          end loop;
+                                          commit;
+                                     end;
+                                   """
+                     ]
+          
+          changes << [
+                              type: 'maven_drop_column_after_data_migration',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+
+          changes << [
+                              type: 'maven_rename_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${table.'@name'} rename column mvn_${tempIndex} to ${column.'@name'}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          return changes;
+      }
+      
 }

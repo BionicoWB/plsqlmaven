@@ -32,6 +32,16 @@ class ViewHelper extends OraDdlHelper
               def view= it.toRowResult()
               xml.view('name':         name)
               {
+                  xml.columns()
+                  {
+                      sql.eachRow("select * from user_tab_columns a where table_name = upper(${name}) order by column_id")
+                      {
+                         def col= it.toRowResult()
+                         
+                         xml.column('name': col.column_name.toLowerCase())
+                      }
+                  }
+    
                  xml.text('') 
                  {
                       out.print("<![CDATA[${view.text}]]>")
@@ -53,33 +63,63 @@ class ViewHelper extends OraDdlHelper
    
       public create(view)
       {
-          def ddl= "create view ${view.'@name'} as ${view.text.text()}";
+          def ddl= "create view ${view.'@name'} "+'('+view.columns.column.collect{ col-> col.'@name' }.join(',')+')'+" as ${view.text.text()}";
           
-          doddl(ddl,"You need to: grant create view to ${username}")
+          return [
+                          type: 'create_view',
+                           ddl: ddl,
+                   privMessage: "You need to: grant create view to ${username}"
+                 ];
+
       }
       
-      public List detectChanges(view)
+      public drop(view)
+      {
+          return [
+                          type: 'create_view',
+                           ddl: "drop view ${view.'@name'}",
+                   privMessage: "You need to: grant drop view to ${username}"
+                 ];
+
+      }
+
+      public detectChanges(source,target)
       {
           def changes= []
-          sql.eachRow("select * from user_views a where view_name = upper(${view.'@name'})")
+          
+          def recreate_view=
           {
-             def dbview= it.toRowResult()
-             
-             if (!cmp(dbview.text,view.text))
-               changes << [type: 'view_change', view: view]
+              changes << drop(source)
+              changes << create(target)
+              
+          }
+          
+          
+          if (!cmp(source.text.text(),target.text.text())
+              || source.columns.column.size()!=target.columns.column.size())
+            recreate_view();
+          else
+          {
+              def equals= true;
+              
+              source.columns.column.eachWithIndex
+              {
+                    sourceCol, index -> 
+                    
+                    def targetCol= target.columns.column[index]; 
+                    
+                    if (!cmp(sourceCol,targetCol,'name'))
+                    {
+                      equals= false
+                      return
+                    }
+              }
+              
+              if (!equals)
+                recreate_view();
           }
           
           return changes
       }
       
-      /*   CHANGES    */
-      
-      public view_change(change)
-      {
-            doddl("drop view ${change.view.'@name'}",
-                   "You need to: grant drop view to ${username}")
-            
-            create(change.view)
-      }
-   
 }
