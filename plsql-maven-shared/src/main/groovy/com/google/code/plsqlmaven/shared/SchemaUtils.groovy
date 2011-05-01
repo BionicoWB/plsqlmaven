@@ -149,8 +149,11 @@ public class SchemaUtils
            }
            catch (SQLException ex)
            {
-               log.error ex.message
-               success= false
+               if (!change.failSafe)
+               {
+                   log.error ex.message
+                   success= false
+               }
            }
        }
        
@@ -159,16 +162,16 @@ public class SchemaUtils
     
     public extractXml(parser,helper,name)
     {
-        StringWriter writer= new StringWriter(file)
+        StringWriter writer= new StringWriter()
         writer.write('<?xml version="1.0" encoding="UTF-8"?>'+"\n")
         def xml = new MarkupBuilder(writer)
         xml.omitNullAttributes = true
         xml.doubleQuotes = true
  
-        if (!schemaUtils.getHelper(type)?.extract(name,xml))
+        if (!helper.extract(name,xml))
           return null
         else
-          return parser.parse(xml.toString())
+          return parser.parseText(writer.toString())
     }
     
     public getHelper(type)

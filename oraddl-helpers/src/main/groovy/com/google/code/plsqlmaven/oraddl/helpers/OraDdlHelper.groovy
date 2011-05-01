@@ -49,7 +49,7 @@ abstract class OraDdlHelper
           def v1= dv((attr ? source."@${attr}" : source),dval)
           def v2= dv((attr ? target."@${attr}" : target),dval)
           
-          //log.debug "@${attr} cmp: "+v1?.toString()+'=='+v2?.toString()
+          log.debug "@${attr} cmp: "+v1?.toString()+'=='+v2?.toString()
           return (v1?.toString()==v2?.toString());
       }
    

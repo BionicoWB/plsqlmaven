@@ -70,7 +70,7 @@ public abstract class PlSqlMojo
      */
     protected Sql sql
     
-    protected PlSqlUtils plsqlUtils= new PlSqlUtils(ant,log);
+    private PlSqlUtils plsqlUtils
     
     private templateEngine = new GStringTemplateEngine()
 
@@ -86,7 +86,7 @@ public abstract class PlSqlMojo
         {
             log.debug( "connecting to " + url )
             sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
-            plsqlUtils.setSql(sql)
+            getPlSqlUtils().setSql(sql)
         }
         else
             sql= null;
@@ -117,22 +117,22 @@ public abstract class PlSqlMojo
     {
         def depsDir= new File(project.build.directory,'deps');
         def artifactDir= new File(depsDir,artifact.id)
-        return plsqlUtils.getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
+        return getPlSqlUtils().getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
     }
 
     public getPlsqlSourceFiles()
     {
-        return plsqlUtils.getPlsqlSourceFiles(project.build.sourceDirectory)
+        return getPlSqlUtils().getPlsqlSourceFiles(project.build.sourceDirectory)
     }
     
     public getSourceDescriptor(file)
     {
-        return plsqlUtils.getSourceDescriptor(file)
+        return getPlSqlUtils().getSourceDescriptor(file)
     }
     
     public compile(file)
     {
-        plsqlUtils.compile(file)
+        getPlSqlUtils().compile(file)
     }
     
     public get_dir(base,name)
@@ -150,6 +150,14 @@ public abstract class PlSqlMojo
            tpl= baos.toString().replace('\\','\\\\')
            def template = templateEngine.createTemplate(tpl).make(context)
            return template.toString();
+    }
+    
+    public PlSqlUtils getPlSqlUtils()
+    {
+         if (!plsqlUtils)
+           plsqlUtils= new PlSqlUtils(ant,log)
+         
+         return plsqlUtils
     }
 
 }
