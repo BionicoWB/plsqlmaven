@@ -880,7 +880,7 @@ class TableHelper extends OraDdlHelper
                                           
                                           exception
                                            when others then
-                                             raise_application_error(-20001,'Found value incompatible with target column precision: '||to_char(v_value)||' at rowid: '||p_rowid);
+                                             raise_application_error(-20001,'Found value incompatible with target column precision: '||to_char(p_old)||' at rowid: '||p_rowid);
                                           end;
                                      begin
                                           for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
