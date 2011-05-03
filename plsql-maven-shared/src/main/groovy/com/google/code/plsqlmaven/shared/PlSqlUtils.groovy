@@ -17,7 +17,7 @@ package com.google.code.plsqlmaven.shared;
  */
 
 import groovy.sql.Sql
-
+import java.sql.SQLException
 
 
 /**
@@ -110,6 +110,8 @@ public class PlSqlUtils
                return 'fnc'
             case 'procedure':
                return 'prc'
+            case 'view':
+               return 'vw'
             case 'trigger':
                return 'trg'
             default:
@@ -120,9 +122,19 @@ public class PlSqlUtils
     public compile(File source)
     {
         def ddl= source.getText()
-        ddl= ddl.substring(0,ddl.lastIndexOf("/"))
+		def sp= ddl.lastIndexOf("/")
+		
+		if (sp>0)
+         ddl= ddl.substring(0,sp)
         
-        sql.execute(ddl)
+		try
+		{
+           sql.execute(ddl)
+		}
+		catch (SQLException ex)
+		{
+			// ignore compile errors (we will read user_errors) 
+	    }
     }
     
     public compileDirectory(String dirPath)

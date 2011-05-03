@@ -41,12 +41,20 @@ public class PlSqlExtractMojo
    */
    private String types;
 
-   /**
+  /**
    * Whether to extract objects already in the project
    * @since 1.8
    * @parameter expression="${existing}"
    */
    private boolean existing;
+
+  /**
+   * Exclude this objects from the extraction (comma separated list of 
+   * Oracle regular expressions for REGEXP_LIKE operator) 
+   * @since 1.9
+   * @parameter expression="${exclude}"
+   */
+   private String exclude;
 
   /**
    * Whether to force extraction even if the sources directory already exists
@@ -87,7 +95,8 @@ public class PlSqlExtractMojo
         def objectsFilter= '';
         def typeFilter= '';
         def existingFilter= '';
- 
+		def excludeFilter= '';
+		
         if (objects)
             objectsFilter= " and name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
         
@@ -97,7 +106,21 @@ public class PlSqlExtractMojo
         if (existing)
             existingFilter= buildExistingFilter()
       
-        def objectsQuery= "select distinct type from user_source where name not like 'SYS_PLSQL_%' and type not like 'JAVA%'"+objectsFilter+typeFilter+existingFilter
+        if (exclude)
+            excludeFilter= buildExcludeFilter()
+			
+        def objectsQuery= """select distinct type 
+                               from (select type, name
+		                               from user_source 
+		                              where name not like 'SYS_PLSQL_%' 
+		                                and type not like 'JAVA%'
+		                             union all
+		                             select 'VIEW' type, view_name name
+		                               from user_views) where 1=1 """+
+						  typeFilter+
+						  objectsFilter+
+						  existingFilter+
+						  excludeFilter
                
         log.debug objectsQuery
             
@@ -110,19 +133,7 @@ public class PlSqlExtractMojo
             
             def things_to_do_to_extract_this_type
             
-            if (! ((type =~ /^package/) || (type =~ /^type/)))
-            {
-               def type_dir= get_dir(project.build.sourceDirectory, type)
-       
-               things_to_do_to_extract_this_type=
-               {
-                   def name= it.name.toLowerCase();
-                   log.info("    "+name)
-                   def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
-                   extract(it.name,type,target_file)
-               }
-            }
-            else
+            if ((type =~ /^package/) || (type =~ /^type/))
             {
                def type_dir= get_dir(project.build.sourceDirectory, type.split()[0])
                
@@ -138,8 +149,44 @@ public class PlSqlExtractMojo
                  }
                }
             }
+			else
+			if (type=='view')
+			{
+               def type_dir= get_dir(project.build.sourceDirectory, type)
+			   
+               things_to_do_to_extract_this_type=
+               {
+                  def name= it.name.toLowerCase();
+                  log.info("    "+name)
+                  def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
+                  extractView(it.name,type,target_file)
+               }
+		    }
+            else
+            {
+               def type_dir= get_dir(project.build.sourceDirectory, type)
        
-            def typeQuery= "select distinct name from user_source where type= ${it.type}"+objectsFilter+existingFilter
+               things_to_do_to_extract_this_type=
+               {
+                   def name= it.name.toLowerCase();
+                   log.info("    "+name)
+                   def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
+                   extract(it.name,type,target_file)
+               }
+            }
+       
+            def typeQuery= """select name, type 
+                                from (select distinct name, type 
+		                                from user_source 
+		                               where type= ${it.type}
+		                              union
+		                              select distinct view_name name, 'VIEW' type 
+		                                from user_views 
+		                               where 'VIEW'= ${it.type})
+		                       where 1=1"""+
+							   objectsFilter+
+							   existingFilter+
+							   excludeFilter
             log.debug typeQuery
             sql.eachRow(typeQuery,
                         things_to_do_to_extract_this_type)
@@ -183,4 +230,33 @@ public class PlSqlExtractMojo
           file << (last_text.endsWith(";") ? "\n/" : "/")
     }
     
+    private extractView(name,type,file)
+    {
+          ant.truncate(file: file.absolutePath)
+          
+          file << "create or replace view "+sid(name)
+          
+		  def columns= []
+		  
+		  sql.eachRow("select column_name from user_tab_columns a where table_name = ${name} order by column_id")
+		  { columns << sid(it.column_name) }
+          
+		  file << '('+columns.join(',')+")\nas\n"
+		  
+          sql.eachRow("""select text
+                           from user_views
+                          where view_name= ${name}""")
+          {
+             file << it.text
+          }
+          
+          file << "\n/"
+    }
+	
+	private buildExcludeFilter()
+	{
+		def excludes= exclude.split(',')
+		
+        return ' and not ('+excludes.collect{ "regexp_like(name,'${it}')" }.join(' or ')+')'
+    }
 }

@@ -16,10 +16,6 @@ package com.google.code.plsqlmaven.oraddl
  * limitations under the License.
  */
 
-import java.io.FileWriter;
-
-import org.apache.maven.plugin.logging.Log;
-
 import groovy.xml.MarkupBuilder
 
 /**
@@ -58,6 +54,14 @@ public class OraDdlExtractMojo
    */
    private boolean existing;
 
+  /**
+   * Exclude this objects from the extraction (comma separated list of
+   * Oracle regular expressions for REGEXP_LIKE operator)
+   * @since 1.9
+   * @parameter expression="${exclude}"
+   */
+   private String exclude;
+
    void execute()
    {
        if (checkSourceDirectory())
@@ -90,7 +94,8 @@ public class OraDdlExtractMojo
        def objectsFilter= '';
        def typeFilter= '';
        def existingFilter= '';
-       
+	   def excludeFilter= '';
+	   
        if (objects)
          objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
 
@@ -100,13 +105,21 @@ public class OraDdlExtractMojo
        if (existing)
          existingFilter= buildExistingFilter()
 
+       if (exclude)
+         excludeFilter= buildExcludeFilter()
+		 
        def objectsQuery="""select object_name, 
                                   object_type
                              from user_objects
                             where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW') 
-                              and object_name not like 'SYS\\_%' escape '\\'"""+objectsFilter+typeFilter+existingFilter;
+                              and object_name not like 'SYS\\_%' escape '\\'"""+
+						typeFilter+
+					    objectsFilter+
+						existingFilter+
+						excludeFilter
                               
-       log.debug objectsQuery                                  
+       log.debug objectsQuery 
+	                                    
        sql.eachRow(objectsQuery)
        {
            def type= it.object_type.toLowerCase()
@@ -121,7 +134,7 @@ public class OraDdlExtractMojo
            xml.omitNullAttributes = true
            xml.doubleQuotes = true
     
-           if (!schemaUtils.getHelper(type)?.extract(name,xml))
+           if (!schemaUtils.getHelper(type)?.extract(it.object_name,xml))
            {
              writer.close()
              file.delete()
@@ -143,20 +156,29 @@ public class OraDdlExtractMojo
        }
 
        def objects= []
+	   def parser= new XmlParser()
        
        for (file in scanner)
        {
            def path= file.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
            def type= path[path.length-2]
            def name= path[path.length-1].split('\\.')[0]
-           objects << ['name': name, 'type': type]
+		   def xml= parser.parse(file)
+           objects << ['name': xml.'@name', 'type': type]
        }
        
        if (objects.size()>0)
-         return ' and ('+objects.collect{ object -> "(object_name= '${object.name.toUpperCase()}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
+         return ' and ('+objects.collect{ object -> "(object_name= '${oid(object.name,false)}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
        else
          return ' and 1=0'
 
    }
-   
+
+   private buildExcludeFilter()
+   {
+	   def excludes= exclude.split(',')
+	   
+	   return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
+   }
+
 }

@@ -30,9 +30,12 @@ class TableHelper extends OraDdlHelper
 
       public boolean extract(name,xml)
       {
+          if (name.toUpperCase()==~'JAVA\\$.*')
+            return false
+            
           def constraints= getConstraints(name)
           
-          xml.table('name': name)
+          xml.table('name': xid(name))
           {
               xml.columns()
               {
@@ -41,7 +44,7 @@ class TableHelper extends OraDdlHelper
                      def col= it.toRowResult()
                      def p= col.data_type.indexOf('(')
                      
-                     xml.column('name':          col.column_name.toLowerCase(),
+                     xml.column('name':          xid(col.column_name),
                                 'type':          col.data_type.toLowerCase().substring(0,(p==-1?col.data_type.length():p)),
                                 'precision':     col.data_precision,
                                 'scale':         col.data_scale,
@@ -62,10 +65,10 @@ class TableHelper extends OraDdlHelper
                       {
                           constraint ->
                           
-                          xml.constraint('name': constraint.constraint_name.toLowerCase(),
+                          xml.constraint('name': xid(constraint.constraint_name),
                                          'type': constraintType(constraint.constraint_type),
                                          'expression': constraint.search_condition,
-                                         'on-delete': constraint.delete_rule!='NO ACTION' ? constraint.delete_rule?.toLowerCase() : null)
+                                         'on-delete': (constraint.delete_rule!='NO ACTION' ? constraint.delete_rule?.toLowerCase() : null))
                           {
                               if (constraint.constraint_type!='C')
                               xml.columns()
@@ -74,21 +77,21 @@ class TableHelper extends OraDdlHelper
                                   {
                                      column ->
                                      
-                                     xml.column('name': column.column_name.toLowerCase())
+                                     xml.column('name': xid(column.column_name))
                                   }
                               }
                               
                               if (constraint.constraint_type=='R')
                               {
                                   
-                                  xml.references('table': constraint.rcolumns[0].table_name.toLowerCase(),
-                                                 'owner': constraint.rcolumns[0].owner==username.toUpperCase() ? null : constraint.rcolumns[0].owner.toLowerCase())
+                                  xml.references('table': xid(constraint.rcolumns[0].table_name),
+                                                 'owner': constraint.rcolumns[0].owner==username.toUpperCase() ? null : xid(constraint.rcolumns[0].owner))
                                   {
                                       constraint.rcolumns.each
                                       {
                                          column ->
                                          
-                                         xml.column('name': column.column_name.toLowerCase())
+                                         xml.column('name': xid(column.column_name))
                                       }
                                   }
                               }
@@ -171,7 +174,7 @@ class TableHelper extends OraDdlHelper
           {          
              constraints.remove fk
              def rcol= fk.rcolumns[0]             
-             return ((username.toUpperCase()!=rcol.owner ? rcol.owner+'.' : '')+rcol.table_name+(rcol.column_name!= columnName ? '.'+rcol.column_name : '')).toLowerCase()
+             return ((username.toUpperCase()!=rcol.owner ? xid(rcol.owner)+'.' : '')+xid(rcol.table_name)+(rcol.column_name!= columnName ? '.'+xid(rcol.column_name) : ''))
           }
           
           return null
@@ -225,7 +228,7 @@ class TableHelper extends OraDdlHelper
       public boolean exists(table)
       {
            def exists= false;
-           sql.eachRow("select 1 from user_tables where table_name= upper(${table.'@name'})")
+           sql.eachRow("select 1 from user_tables where table_name= upper(${oid(table.'@name',false)})")
            { exists= true }
            
            return exists
@@ -237,7 +240,7 @@ class TableHelper extends OraDdlHelper
           
           changes << [
                               type: 'create_table',
-                               ddl: 'create table '+(table.'@name')+'('+table.columns.column.collect{ col-> col.'@name'+' '+getColumnType(col) }.join(',')+')',
+                               ddl: 'create table '+oid(table.'@name')+'('+table.columns.column.collect{ col-> oid(col.'@name')+' '+getColumnType(col) }.join(',')+')',
                        privMessage: "You need to: grant create table to ${username}"         
                      ]
           
@@ -246,16 +249,16 @@ class TableHelper extends OraDdlHelper
               column ->
               
               if (column.'@primary'=='true')
-                add_simple_primary(table,column)
+                changes << add_simple_primary(table,column)
 
               if (column.'@not-null'=='true')
-                add_simple_notnull(table,column)
+                changes << add_simple_notnull(table,column)
 
               if (column.'@unique'=='true')
-                add_simple_unique(table,column)
+                changes << add_simple_unique(table,column)
                 
               if (column.'@references')
-                add_simple_foreign(table,column)
+                changes << add_simple_foreign(table,column)
 
           }
           
@@ -291,45 +294,83 @@ class TableHelper extends OraDdlHelper
                       changes += modify_column(target,targetCol,sourceCol)
                     
                     if (!cmp(sourceCol,targetCol,'primary','false'))
-                      changes << modify_simple_primary(target,targetCol,sourceCol)
+                      changes += modify_simple_primary(target,targetCol)
 
                     if (!cmp(sourceCol,targetCol,'unique','false'))
-                      changes << modify_simple_unique(target,targetCol,sourceCol)
+                      changes += modify_simple_unique(target,targetCol)
 
                     if (!cmp(sourceCol,targetCol,'check'))
-                      changes << modify_simple_check(target,targetCol,sourceCol)
+                      changes += modify_simple_check(target,targetCol)
                       
                     if (!cmp(sourceCol,targetCol,'not-null','false'))
-                      changes << modify_simple_notnull(target,targetCol,sourceCol)
+                      changes += modify_simple_notnull(target,targetCol)
 
                     if (!cmp(sourceCol,targetCol,'references'))
-                      changes << modify_simple_foreign(target,targetCol,sourceCol)
+                      changes += modify_simple_foreign(target,targetCol)
                 }
           }
 
+		  def renamedConstraints= []
           
+          source.constraints.constraint.findAll{ c -> (!(c.'@name' in target.constraints.constraint*.'@name')) }.each
+          {
+                constraint ->
+
+				def rename= false;
+				def targetCons;
+				
+				if (constraint.'@type'=='primary') 
+				{
+					targetCons= target.constraints.constraint.find{ c -> (c.'@type'=='primary') }
+					
+					try
+					{
+						if (constraint.columns.column.size()!=targetCons.columns.column.size())
+	    					    throw new ContextException('column count differs')
+					    else
+							targetCons.columns.column.eachWithIndex
+							{
+								targetCol, index ->
+								
+								def sourceCol= constraint.columns.column[index];
+								
+								if (!cmp(sourceCol,targetCol,'name'))
+								  throw new ContextException('columns differs')
+							}
+							
+					    rename= true;
+					}
+					catch (ContextException cex)
+					{}
+			    }
+				
+				if (rename)
+				{
+				  renamedConstraints << targetCons.'@name'
+                  changes << rename_constraint(target,constraint,targetCons);
+				}
+				else                
+                  changes << drop_constraint(target,constraint);
+          }
+              
           source.columns.column.findAll{ col -> (!(col.'@name' in target.columns.column*.'@name')) }.each
           {
               column ->
               
               changes << drop_column(target,column)
           }
-          
-          source.constraints.constraint.findAll{ c -> (!(c.'@name' in target.constraints.constraint*.'@name')) }.each
-          {
-                constraint ->
-                 
-                changes << drop_constraint(target,constraint);
-          }
-              
+		  
           target.constraints.constraint.each
           {
                  targetCons ->
 
-                 def sourceCons= source.constraints.constraint.find{ c-> (c.'@name'==targetCons.'@name')} 
-                     
+                 def sourceCons= source.constraints.constraint.find{ c-> (c.'@name'==targetCons.'@name')}
+                 
                  if (!sourceCons)
-                    changes << add_constraint(target,targetCons)
+				 {
+					 if (!targetCons.'@name' in renamedConstraints)
+                       changes << add_constraint(target,targetCons)
+				 }
                  else
                  {
                      try
@@ -375,7 +416,7 @@ class TableHelper extends OraDdlHelper
                      }
                      catch (ContextException ex)
                      {
-                         changes << modify_constraint(target,targetCons,ex.context)
+                         changes += modify_constraint(target,targetCons,ex.context)
                      }
                   }
                      
@@ -391,7 +432,7 @@ class TableHelper extends OraDdlHelper
       {
            return [
                             type: 'drop_column',
-                             ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                             ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
                      privMessage: "You need to: grant alter table to ${username}"
                   ]
       }
@@ -423,7 +464,7 @@ class TableHelper extends OraDdlHelper
              
              changes+= [
                                  type: 'modify_column',
-                                  ddl: "alter table ${table.'@name'} modify (${targetCol.'@name'} ${columnType})",
+                                  ddl: "alter table ${oid(table.'@name')} modify (${oid(targetCol.'@name')} ${columnType})",
                           privMessage: "You need to: grant alter table to ${username}"
                        ]
           }
@@ -437,7 +478,7 @@ class TableHelper extends OraDdlHelper
           
           return [
                                  type: 'add_column',
-                                  ddl: "alter table ${table.'@name'} add (${column.'@name'} ${columnType})",
+                                  ddl: "alter table ${oid(table.'@name')} add (${oid(column.'@name')} ${columnType})",
                           privMessage: "You need to: grant alter table to ${username}"
                  ]
           
@@ -445,7 +486,7 @@ class TableHelper extends OraDdlHelper
       
       public add_constraint(table,constraint)
       {
-          def ddl= "alter table ${table.'@name'} add constraint ${constraint.'@name'} ";
+          def ddl= "alter table ${oid(table.'@name')} add constraint ${oid(constraint.'@name')} ";
           
           if (constraint.'@type'=='primary')
               ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"
@@ -456,6 +497,9 @@ class TableHelper extends OraDdlHelper
               def owner= constraint.references[0].'@owner'
               ddl+=" references "+( owner&&owner!=username ? owner+'.' : '' )+constraint.references[0].'@table'
               ddl+='('+constraint.references.column*.'@name'.join(',')+')'
+              
+              if (dv(constraint.'@on-delete','no action')!='no action')
+                ddl+=' on delete '+constraint.'@on-delete'
           }
           else
           if (constraint.'@type'=='check')
@@ -468,26 +512,43 @@ class TableHelper extends OraDdlHelper
           return [
                          type: 'add_constraint',
                           ddl: ddl,
-                  privMessage: "You need to: grant alter table to ${username}"
+                  privMessage: "You need to: grant alter table to ${username}",
+				   constraint: [type: constraint.'@type']
                  ]
 
       }
    
-      public drop_constraint(table,constraint)
+      public rename_constraint(table,sourceCons,targetCons)
+      {
+          return [
+                              type: 'rename_constraint',
+                               ddl: "alter table ${oid(table.'@name')} rename constraint ${oid(sourceCons.'@name')} to ${oid(targetCons.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
+      }
+
+	  public drop_constraint(table,constraint)
       {
           return [
                               type: 'drop_constraint',
-                               ddl: "alter table ${table.'@name'} drop constraint ${constraint.'@name'} cascade",
+                               ddl: "alter table ${oid(table.'@name')} drop constraint ${oid(constraint.'@name')} cascade",
                        privMessage: "You need to: grant alter table to ${username}"
                  ]
+      }
+      
+      public modify_constraint(table,constraint,cause=null)
+      {
+          return [drop_constraint(table,constraint),
+                  add_constraint(table,constraint)]
       }
       
       public add_simple_primary(table,column)
       {
           return [
                               type: 'add_constraint',
-                               ddl: "alter table ${table.'@name'} add primary key (${column.'@name'})",
-                       privMessage: "You need to: grant alter table to ${username}"
+                               ddl: "alter table ${oid(table.'@name')} add primary key (${oid(column.'@name')})",
+                       privMessage: "You need to: grant alter table to ${username}",
+				        constraint: [type: 'primary']
                  ]
       }
 
@@ -495,17 +556,24 @@ class TableHelper extends OraDdlHelper
       {
           return [
                               type: 'drop_constraint',
-                               ddl: "alter table ${table.'@name'} drop primary key cascade",
+                               ddl: "alter table ${oid(table.'@name')} drop primary key cascade",
                        privMessage: "You need to: grant alter table to ${username}"
                  ]
+      }
+      
+      public modify_simple_primary(table,column)
+      {
+          return [drop_simple_primary(table,column),
+                  add_simple_primary(table,column)]
       }
 
       public add_simple_unique(table,column)
       {
           return [
                               type: 'add_constraint',
-                               ddl: "alter table ${table.'@name'} add unique (${column.'@name'})",
-                       privMessage: "You need to: grant alter table to ${username}"
+                               ddl: "alter table ${oid(table.'@name')} add unique (${oid(column.'@name')})",
+                       privMessage: "You need to: grant alter table to ${username}",
+				        constraint: [type: 'unique']
                  ]
       }
 
@@ -523,25 +591,32 @@ class TableHelper extends OraDdlHelper
                                                 user_cons_columns b
                                           where a.constraint_name= b.constraint_name
                                             and a.table_name= b.table_name
-                                            and a.table_name= upper(${table.'@name'})
-                                            and b.column_name= upper(${column.'@name'})
+                                            and a.table_name= upper('${oid(table.'@name',false)}')
+                                            and b.column_name= upper('${oid(column.'@name',false)}')
                                             and a.generated= 'GENERATED NAME'
                                             and a.constraint_type= 'U'
                                             and rownum < 2;
                                          
-                                         execute immediate 'alter table ${table.'@name'} drop constraint '||v_constraint;
+                                         execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||v_constraint||'";
                                          
                                        end;""",
                        privMessage: "You need to: grant alter table to ${username}"
                  ]
+      }
+      
+      public modify_simple_unique(table,column)
+      {
+          return [drop_simple_unique(table,column),
+                  add_simple_unique(table,column)]
       }
 
       public add_simple_check(table,column)
       {
           return [
                               type: 'add_constraint',
-                               ddl: "alter table ${table.'@name'} add check (${column.'@name'})",
-                       privMessage: "You need to: grant alter table to ${username}"
+                               ddl: "alter table ${oid(table.'@name')} add check (${oid(column.'@name')})",
+                       privMessage: "You need to: grant alter table to ${username}",
+				        constraint: [type: 'check']
                  ]
       }
 
@@ -558,16 +633,16 @@ class TableHelper extends OraDdlHelper
                                              from user_constraints a,
                                                   user_cons_columns b
                                             where a.constraint_name= b.constraint_name 
-                                              and b.column_name= upper(${column.'@name'})
+                                              and b.column_name= upper('${oid(column.'@name',false)}')
                                               and a.table_name= b.table_name
-                                              and a.table_name= upper(${table.'@name'})
+                                              and a.table_name= upper('${oid(table.'@name',false)}')
                                               and a.generated= 'GENERATED NAME'
                                               and a.constraint_type= 'C'
                                               and (select count(*) 
                                                      from user_cons_columns
                                                     where constraint_name= a.constraint_name)= 1;
                                          
-                                         execute immediate 'alter table ${table.'@name'} drop constraint '||v_constraint;
+                                         execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||v_constraint||'"';
                                          
                                        end;""",
                        privMessage: "You need to: grant alter table to ${username}"
@@ -576,16 +651,18 @@ class TableHelper extends OraDdlHelper
 
       public modify_simple_check(table,column)
       {
-          drop_simple_check(table,column)
-          add_simple_check(table,column)
+          return [drop_simple_check(table,column),
+                  add_simple_check(table,column)]
+          
       }
 
       public add_simple_notnull(table,column)
       {
           return [
                               type: 'add_constraint',
-                               ddl: "alter table ${table.'@name'} add check (${column.'@name'} is not null)",
-                       privMessage: "You need to: grant alter table to ${username}"
+                               ddl: "alter table ${oid(table.'@name')} add check (${oid(column.'@name')} is not null)",
+                       privMessage: "You need to: grant alter table to ${username}",
+				        constraint: [type: 'not-null']
                  ]
       }
 
@@ -603,9 +680,9 @@ class TableHelper extends OraDdlHelper
                                                              from user_constraints a,
                                                                   user_cons_columns b
                                                             where a.constraint_name= b.constraint_name 
-                                                              and b.column_name= upper(${column.'@name'})
+                                                              and b.column_name= upper('${oid(column.'@name',false)}')
                                                               and a.table_name= b.table_name
-                                                              and a.table_name= upper(${table.'@name'})
+                                                              and a.table_name= upper('${oid(table.'@name',false)}')
                                                               and a.generated= 'GENERATED NAME'
                                                               and a.constraint_type= 'C'
                                                               and (select count(*) 
@@ -613,7 +690,7 @@ class TableHelper extends OraDdlHelper
                                                                     where constraint_name= a.constraint_name)= 1)
                                              loop
                                               if c_cur.search_condition= '"'||c_cur.column_name||'" IS NOT NULL' then
-                                                execute immediate 'alter table ${table.'@name'} drop constraint '||c_cur.constraint_name;
+                                                execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||c_cur.constraint_name||'"';
                                               end if;
                                              end loop;
                                          
@@ -621,24 +698,31 @@ class TableHelper extends OraDdlHelper
                        privMessage: "You need to: grant alter table to ${username}"
                  ]
       }
+      
+      public modify_simple_notnull(table,column)
+      {
+          return [drop_simple_notnull(table,column),
+                  add_simple_notnull(table,column)]
+      }
 
       public add_simple_foreign(table,column)
       {
-          def ref= change.references.split('\\.')
+          def ref= column.'@references'.split('\\.')
           def references;
           
           if (ref.length==3)
-            references= ref[0]+'.'+ref[1]+'('+ref[2]+')'
+            references= oid(ref[0])+'.'+oid(ref[1])+'('+oid(ref[2])+')'
           else
           if (ref.length==2)
-            references= ref[0]+'('+ref[1]+')'
+            references= oid(ref[0])+'('+oid(ref[1])+')'
           else
-            references= ref[0]+'('+column.'@name'+')'
+            references= oid(ref[0])+'('+oid(column.'@name')+')'
   
           return [
                               type: 'add_constraint',
-                               ddl: "alter table ${table.'@name'} add foreign key (${column.'@name'}) references ${references}",
-                       privMessage: "You need to: grant alter table to ${username}"
+                               ddl: "alter table ${oid(table.'@name')} add foreign key (${oid(column.'@name')}) references ${references}",
+                       privMessage: "You need to: grant alter table to ${username}",
+					    constraint: [type: 'foreign']
                  ]
       }
 
@@ -656,12 +740,12 @@ class TableHelper extends OraDdlHelper
                                                   user_cons_columns b
                                             where a.constraint_name= b.constraint_name
                                               and a.table_name= b.table_name
-                                              and a.table_name= upper(${table.'@name'})
-                                              and b.column_name= upper(${column.'@name'})
+                                              and a.table_name= upper('${oid(table.'@name',false)}')
+                                              and b.column_name= upper('${oid(column.'@name',false)}')
                                               and a.generated= 'GENERATED NAME'
                                               and a.constraint_type= 'R';
                                                                                                                            
-                                         execute immediate 'alter table ${table.'@name'} drop constraint '||v_constraint;
+                                         execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||v_constraint||'"';
                                          
                                        end;""",
                        privMessage: "You need to: grant alter table to ${username}"
@@ -670,8 +754,8 @@ class TableHelper extends OraDdlHelper
 
       public modify_simple_foreign(table,column)
       {
-          drop_simple_foreign(change)
-          add_simple_foreign(change)
+          return [drop_simple_foreign(table,column),
+                  add_simple_foreign(table,column)]
       }
       
       public column_clob_to_varchar2(table,column)
@@ -686,7 +770,7 @@ class TableHelper extends OraDdlHelper
                              type: 'drop_maven_temporary_column',
                          mainType: 'modify_column',
                         tempIndex: tempIndex,
-                              ddl: "alter table ${table.'@name'} drop column mvn_${tempIndex}",
+                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
                          failSafe: true
                         ]
           }
@@ -697,7 +781,7 @@ class TableHelper extends OraDdlHelper
                               type: 'add_maven_temporary_column',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} add (mvn_${tempIndex} ${columnType})",
+                               ddl: "alter table ${oid(table.'@name')} add (mvn_${tempIndex} ${columnType})",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
@@ -724,9 +808,9 @@ class TableHelper extends OraDdlHelper
                                              
                                           end;
                                      begin
-                                          for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
-                                             v_value:= to_varchar2(c_cur.${column.'@name'},${target_length},c_cur.rwid);
-                                             update ${table.'@name'}
+                                          for c_cur in (select rowid rwid, ${oid(column.'@name')} from ${oid(table.'@name')}) loop
+                                             v_value:= to_varchar2(c_cur.${oid(column.'@name')},${target_length},c_cur.rwid);
+                                             update ${oid(table.'@name')}
                                                 set mvn_${tempIndex}= v_value
                                               where rowid= c_cur.rwid;
                                           end loop;
@@ -739,7 +823,7 @@ class TableHelper extends OraDdlHelper
                               type: 'maven_drop_column_after_data_migration',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                               ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
 
@@ -747,7 +831,7 @@ class TableHelper extends OraDdlHelper
                               type: 'maven_rename_temporary_column',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} rename column mvn_${tempIndex} to ${column.'@name'}",
+                               ddl: "alter table ${oid(table.'@name')} rename column mvn_${tempIndex} to ${oid(column.'@name')}",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
@@ -766,7 +850,7 @@ class TableHelper extends OraDdlHelper
                              type: 'drop_maven_temporary_column',
                          mainType: 'modify_column',
                         tempIndex: tempIndex,
-                              ddl: "alter table ${table.'@name'} drop column mvn_${tempIndex}",
+                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
                          failSafe: true
                         ]
           }
@@ -777,7 +861,7 @@ class TableHelper extends OraDdlHelper
                               type: 'add_maven_temporary_column',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} add (mvn_${tempIndex} ${columnType})",
+                               ddl: "alter table ${oid(table.'@name')} add (mvn_${tempIndex} ${columnType})",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
@@ -804,9 +888,9 @@ class TableHelper extends OraDdlHelper
                                              
                                           end;
                                      begin
-                                          for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
-                                             v_value:= to_varchar2(c_cur.${column.'@name'},${target_length},c_cur.rwid);
-                                             update ${table.'@name'}
+                                          for c_cur in (select rowid rwid, ${oid(column.'@name')} from ${oid(table.'@name')}) loop
+                                             v_value:= to_varchar2(c_cur.${oid(column.'@name')},${target_length},c_cur.rwid);
+                                             update ${oid(table.'@name')}
                                                 set mvn_${tempIndex}= v_value
                                               where rowid= c_cur.rwid;
                                           end loop;
@@ -819,7 +903,7 @@ class TableHelper extends OraDdlHelper
                               type: 'maven_drop_column_after_data_migration',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                               ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
 
@@ -827,7 +911,7 @@ class TableHelper extends OraDdlHelper
                               type: 'maven_rename_temporary_column',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} rename column mvn_${tempIndex} to ${column.'@name'}",
+                               ddl: "alter table ${oid(table.'@name')} rename column mvn_${tempIndex} to ${oid(column.'@name')}",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
@@ -847,7 +931,7 @@ class TableHelper extends OraDdlHelper
                              type: 'drop_maven_temporary_column',
                          mainType: 'modify_column',
                         tempIndex: tempIndex,
-                              ddl: "alter table ${table.'@name'} drop column mvn_${tempIndex}",
+                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
                          failSafe: true
                         ]
           }
@@ -858,7 +942,7 @@ class TableHelper extends OraDdlHelper
                               type: 'add_maven_temporary_column',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} add (mvn_${tempIndex} ${columnType})",
+                               ddl: "alter table ${oid(table.'@name')} add (mvn_${tempIndex} ${columnType})",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
@@ -883,9 +967,9 @@ class TableHelper extends OraDdlHelper
                                              raise_application_error(-20001,'Found value incompatible with target column precision: '||to_char(p_old)||' at rowid: '||p_rowid);
                                           end;
                                      begin
-                                          for c_cur in (select rowid rwid, ${column.'@name'} from ${table.'@name'}) loop
-                                             v_value:= reduce_precision(c_cur.${column.'@name'},c_cur.rwid);
-                                             update ${table.'@name'}
+                                          for c_cur in (select rowid rwid, ${oid(column.'@name')} from ${oid(table.'@name')}) loop
+                                             v_value:= reduce_precision(c_cur.${oid(column.'@name')},c_cur.rwid);
+                                             update ${oid(table.'@name')}
                                                 set mvn_${tempIndex}= v_value
                                               where rowid= c_cur.rwid;
                                           end loop;
@@ -898,7 +982,7 @@ class TableHelper extends OraDdlHelper
                               type: 'maven_drop_column_after_data_migration',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} drop column ${column.'@name'}",
+                               ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
 
@@ -906,11 +990,29 @@ class TableHelper extends OraDdlHelper
                               type: 'maven_rename_temporary_column',
                           mainType: 'modify_column',
                          tempIndex: tempIndex,
-                               ddl: "alter table ${table.'@name'} rename column mvn_${tempIndex} to ${column.'@name'}",
+                               ddl: "alter table ${oid(table.'@name')} rename column mvn_${tempIndex} to ${oid(column.'@name')}",
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
           return changes;
+      }
+	  
+	  public reorder(changes)
+	  {
+		  def reordered= changes.clone()
+		  
+		  changes.each
+		  {
+			  change ->
+			  
+			  if (change.type=='add_constraint'&&change.constraint.type=='foreign')
+			  {
+				  reordered.remove(change)
+				  reordered << change
+		      }
+	      }
+		  
+		  return reordered
       }
       
 }

@@ -38,8 +38,8 @@ class IndexHelper extends OraDdlHelper
                                                      where index_name is not null)""")
            {
                def ind= it.toRowResult()
-               xml.index('name':         name,
-                         'table':        ind.table_name.toLowerCase(),
+               xml.index('name':         xid(ind.index_name),
+                         'table':        xid(ind.table_name),
                          'unique':       (ind.uniqueness=='UNIQUE' ? 'true' : null))
                { 
                    xml.columns()
@@ -51,17 +51,17 @@ class IndexHelper extends OraDdlHelper
                                              user_ind_expressions b
                                        where b.column_position(+)= a.column_position
                                          and b.index_name(+)= a.index_name
-                                         and a.index_name= upper(${name})
+                                         and a.index_name= upper(${ind.index_name})
                                     order by a.column_position""")
                        {
                           def col= it.toRowResult()
                           
                           if (col.column_expression)
-                              xml.column('expression':   col.column_expression.toLowerCase().replace('"',''), 
-                                         'direction':    rd(col.descend,'ASC')?.toLowerCase());
+                              xml.column('expression':   col.column_expression, 
+                                         'direction':    xid(rd(col.descend,'ASC')));
                           else
-                              xml.column('name':         col.column_name.toLowerCase(),
-                                         'direction':    rd(col.descend,'ASC')?.toLowerCase());
+                              xml.column('name':         xid(col.column_name),
+                                         'direction':    xid(rd(col.descend,'ASC')));
     
                        }
                    }
@@ -75,7 +75,7 @@ class IndexHelper extends OraDdlHelper
       public boolean exists(index)
       {
            def exists= false;
-           sql.eachRow("select 1 from user_indexes where index_name= upper(${index.'@name'})")
+           sql.eachRow("select 1 from user_indexes where index_name= upper(${oid(index.'@name',false)})")
            { exists= true }
            
            return exists;
@@ -83,8 +83,8 @@ class IndexHelper extends OraDdlHelper
       
       public create(index)
       {
-          def ddl= "create"+(index.'@unique'=='true' ? ' unique' : '')+" index ${index.'@name'} on "+
-                        "${index.'@table'} ("+
+          def ddl= "create"+(index.'@unique'=='true' ? ' unique' : '')+" index ${oid(index.'@name')} on "+
+                        "${oid(index.'@table')} ("+
                         index.columns.column.
                          collect{ indexPart(it) }.
                          join(',')+
@@ -101,12 +101,12 @@ class IndexHelper extends OraDdlHelper
       {
           return [ 
                           type: 'drop_index', 
-                           ddl: "drop index ${index.'@name'}",
+                           ddl: "drop index ${oid(index.'@name')}",
                    privMessage: "You need to: grant drop index to ${username}" 
                  ];
       }
       
-      public List detectChanges(source,target)
+      public detectChanges(source,target)
       {
           def changes= [];
           
@@ -147,6 +147,6 @@ class IndexHelper extends OraDdlHelper
       
       private indexPart(col)
       {
-          return (col.'@name' ? col.'@name' : col.'@expression');
+          return (col.'@name' ? oid(col.'@name') : col.'@expression');
       }
 }

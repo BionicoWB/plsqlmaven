@@ -86,7 +86,7 @@ public abstract class PlSqlMojo
         {
             log.debug( "connecting to " + url )
             sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
-            getPlSqlUtils().setSql(sql)
+            getPlsqlUtils().setSql(sql)
         }
         else
             sql= null;
@@ -117,22 +117,22 @@ public abstract class PlSqlMojo
     {
         def depsDir= new File(project.build.directory,'deps');
         def artifactDir= new File(depsDir,artifact.id)
-        return getPlSqlUtils().getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
+        return getPlsqlUtils().getPlsqlSourceFiles(artifactDir.absolutePath+File.separator+'plsql')
     }
 
     public getPlsqlSourceFiles()
     {
-        return getPlSqlUtils().getPlsqlSourceFiles(project.build.sourceDirectory)
+        return getPlsqlUtils().getPlsqlSourceFiles(project.build.sourceDirectory)
     }
     
     public getSourceDescriptor(file)
     {
-        return getPlSqlUtils().getSourceDescriptor(file)
+        return getPlsqlUtils().getSourceDescriptor(file)
     }
     
     public compile(file)
     {
-        getPlSqlUtils().compile(file)
+        getPlsqlUtils().compile(file)
     }
     
     public get_dir(base,name)
@@ -152,12 +152,25 @@ public abstract class PlSqlMojo
            return template.toString();
     }
     
-    public PlSqlUtils getPlSqlUtils()
+    public PlSqlUtils getPlsqlUtils()
     {
          if (!plsqlUtils)
            plsqlUtils= new PlSqlUtils(ant,log)
          
          return plsqlUtils
     }
-
+     
+	public sid(oracleIdentifier)
+	{
+		  if (oracleIdentifier==null)
+		    return null
+			
+          if (oracleIdentifier!=oracleIdentifier.toUpperCase()
+              ||(oracleIdentifier==~'.* .*')
+              ||(oracleIdentifier==~'^[^A-Z].*'))
+            return '"'+oracleIdentifier+'"'
+          else
+            return oracleIdentifier.toLowerCase()
+    }
+	
 }

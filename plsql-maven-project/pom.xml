@@ -46,6 +46,9 @@
                  <goals>
                    <goal>sync</goal>
                  </goals>
+		 <configuration>
+                    <changedOnly>true</changedOnly>
+                 </configuration>
               </execution>
               <execution>
                  <id>package-schema-objects</id>

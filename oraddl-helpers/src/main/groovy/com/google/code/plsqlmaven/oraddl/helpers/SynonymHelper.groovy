@@ -30,10 +30,10 @@ class SynonymHelper extends OraDdlHelper
            sql.eachRow("select a.*, user current_user from user_synonyms a where synonym_name = upper(${name})")
            {
               def syn= it.toRowResult()
-              xml.synonym('name':         name, 
-                          'for':          syn.table_name.toLowerCase(),
-                          'for-owner':    rd(syn.table_owner,syn.current_user)?.toLowerCase(),
-                          'db-link':      syn.db_link?.toLowerCase())
+              xml.synonym('name':         xid(syn.synonym_name), 
+                          'for':          xid(syn.table_name),
+                          'for-owner':    xid(rd(syn.table_owner,syn.current_user)),
+                          'db-link':      xid(syn.db_link))
            }
            
            return true
@@ -42,7 +42,7 @@ class SynonymHelper extends OraDdlHelper
       public boolean exists(synonym)
       {
            def exists= false;
-           sql.eachRow("select 1 from user_synonyms where synonym_name= upper(${synonym.'@name'})")
+           sql.eachRow("select 1 from user_synonyms where synonym_name= upper(${oid(synonym.'@name',false)})")
            { exists= true }
            
            return exists;
@@ -50,15 +50,15 @@ class SynonymHelper extends OraDdlHelper
    
       public create(synonym)
       {
-          def ddl= "create synonym ${synonym.'@name'} for "
+          def ddl= "create synonym ${oid(synonym.'@name')} for "
           
           if (synonym.'@for-owner')
-            ddl+= synonym.'@for-owner'+'.'
+            ddl+= oid(synonym.'@for-owner')+'.'
             
-          ddl+= synonym.'@for'
+          ddl+= oid(synonym.'@for')
    
           if (synonym.'@db-link')
-            ddl+= '@'+synonym.'@db-link'
+            ddl+= '@'+oid(synonym.'@db-link')
    
           return [ 
                           type: 'create_synonym',
@@ -71,12 +71,12 @@ class SynonymHelper extends OraDdlHelper
       {
           return [ 
                           type: 'drop_synonym',
-                           ddl: "drop synonym ${synonym.'@name'}",
+                           ddl: "drop synonym ${oid(synonym.'@name')}",
                    privMessage: "You need to: grant drop synonym to ${username}"
                  ]
       }
 
-      public List detectChanges(source,target)
+      public detectChanges(source,target)
       {
           def changes= []
           

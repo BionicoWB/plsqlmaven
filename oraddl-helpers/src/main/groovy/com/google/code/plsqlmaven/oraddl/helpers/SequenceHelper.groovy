@@ -31,7 +31,7 @@ class SequenceHelper extends OraDdlHelper
            {
               def seq= it.toRowResult()
               def cache= rd(seq.cache_size,20);
-              xml.sequence('name':         name, 
+              xml.sequence('name':         xid(seq.sequence_name), 
                            'min-value':    rd(seq.min_value,1),
                            'max-value':    rd(seq.max_value,999999999999999999999999999),
                            'increment-by': rd(seq.increment_by,1),
@@ -46,7 +46,7 @@ class SequenceHelper extends OraDdlHelper
       public boolean exists(sequence)
       {
            def exists= false;
-           sql.eachRow("select 1 from user_sequences where sequence_name= upper(${sequence.'@name'})")
+           sql.eachRow("select 1 from user_sequences where sequence_name= upper(${oid(sequence.'@name',false)})")
            { exists= true }
            
            return exists;
@@ -54,7 +54,7 @@ class SequenceHelper extends OraDdlHelper
       
       public create(sequence)
       {
-          def ddl= 'create sequence '+(sequence.'@name');
+          def ddl= 'create sequence '+oid(sequence.'@name');
           
           if (sequence.'@min-value'!=null)
             ddl+=' minvalue '+sequence.'@min-value'
@@ -99,7 +99,7 @@ class SequenceHelper extends OraDdlHelper
                  ]
       }
       
-      public List detectChanges(source,target)
+      public detectChanges(source,target)
       {
           def changes= []
           
@@ -131,9 +131,9 @@ class SequenceHelper extends OraDdlHelper
           def ddl;
           
           if (sequence.'@min-value'!=null)
-            ddl= "alter sequence ${sequence.'@name'} minvalue ${sequence.'@min-value'}"
+            ddl= "alter sequence ${oid(sequence.'@name')} minvalue ${sequence.'@min-value'}"
           else
-            ddl= "alter sequence ${sequence.'@name'} nominvalue"
+            ddl= "alter sequence ${oid(sequence.'@name')} nominvalue"
             
           return [
                             type: 'sequence_minvalue',
@@ -148,9 +148,9 @@ class SequenceHelper extends OraDdlHelper
           def ddl;
    
           if (change.maxvalue!=null)
-            ddl= "alter sequence ${sequence.'@name'} maxvalue ${sequence.'@max-value'}"
+            ddl= "alter sequence ${oid(sequence.'@name')} maxvalue ${sequence.'@max-value'}"
           else
-            ddl= "alter sequence ${sequence.'@name'} nomaxvalue"
+            ddl= "alter sequence ${oid(sequence.'@name')} nomaxvalue"
    
           return [
                             type: 'sequence_maxvalue',
@@ -164,9 +164,9 @@ class SequenceHelper extends OraDdlHelper
           def ddl;
    
           if (sequence.'@increment-by'!=null)
-            ddl= "alter sequence ${sequence.'@name'} increment by ${sequence.'@increment-by'}"
+            ddl= "alter sequence ${oid(sequence.'@name')} increment by ${sequence.'@increment-by'}"
           else
-            ddl= "alter sequence ${sequence.'@name'} increment by 1"
+            ddl= "alter sequence ${oid(sequence.'@name')} increment by 1"
             
           return [
                             type: 'sequence_incrementby',
@@ -182,12 +182,12 @@ class SequenceHelper extends OraDdlHelper
           if (sequence.'@cache'!=null)
           {
             if (sequence.'@cache'=='false'||sequence.'@cache'=='0')
-              ddl= "alter sequence ${sequence.'@name'} nocache"
+              ddl= "alter sequence ${oid(sequence.'@name')} nocache"
             else
-              ddl= "alter sequence ${sequence.'@name'} cache ${sequence.'@cache'}"
+              ddl= "alter sequence ${oid(sequence.'@name')} cache ${sequence.'@cache'}"
           }
           else
-            ddl= "alter sequence ${sequence.'@name'} cache 20"
+            ddl= "alter sequence ${oid(sequence.'@name')} cache 20"
             
           return [
                             type: 'sequence_cache',
@@ -203,12 +203,12 @@ class SequenceHelper extends OraDdlHelper
           if (sequence.'@order'!=null)
           {
             if (sequence.'@order'=='false')
-              ddl= "alter sequence ${sequence.'@name'} noorder"
+              ddl= "alter sequence ${oid(sequence.'@name')} noorder"
             else
-              ddl= "alter sequence ${sequence.'@name'} order"
+              ddl= "alter sequence ${oid(sequence.'@name')} order"
           }
           else
-            ddl= "alter sequence ${sequence.'@name'} noorder"
+            ddl= "alter sequence ${oid(sequence.'@name')} noorder"
             
           return [
                             type: 'sequence_order',
@@ -224,12 +224,12 @@ class SequenceHelper extends OraDdlHelper
           if (sequence.'@cycle'!=null)
           {
             if (sequence.'@cycle'=='false')
-              ddl= "alter sequence ${sequence.'@name'} nocycle"
+              ddl= "alter sequence ${oid(sequence.'@name')} nocycle"
             else
-              ddl= "alter sequence ${sequence.'@name'} cycle"
+              ddl= "alter sequence ${oid(sequence.'@name')} cycle"
           }
           else
-            ddl= "alter sequence ${sequence.'@name'} nocycle"
+            ddl= "alter sequence ${oid(sequence.'@name')} nocycle"
    
           return [
                             type: 'sequence_cycle',

@@ -30,7 +30,7 @@ class ViewHelper extends OraDdlHelper
            sql.eachRow("select * from user_views a where view_name = upper(${name})")
            {
               def view= it.toRowResult()
-              xml.view('name':         name)
+              xml.view('name': xid(view.view_name))
               {
                   xml.columns()
                   {
@@ -38,7 +38,7 @@ class ViewHelper extends OraDdlHelper
                       {
                          def col= it.toRowResult()
                          
-                         xml.column('name': col.column_name.toLowerCase())
+                         xml.column('name': xid(col.column_name))
                       }
                   }
     
@@ -55,7 +55,7 @@ class ViewHelper extends OraDdlHelper
       public boolean exists(view)
       {
            def exists= false;
-           sql.eachRow("select 1 from user_views where view_name= upper(${view.'@name'})")
+           sql.eachRow("select 1 from user_views where view_name= upper(${oid(view.'@name',false)})")
            { exists= true }
            
            return exists;
@@ -63,7 +63,7 @@ class ViewHelper extends OraDdlHelper
    
       public create(view)
       {
-          def ddl= "create view ${view.'@name'} "+'('+view.columns.column.collect{ col-> col.'@name' }.join(',')+')'+" as ${view.text.text()}";
+          def ddl= "create "+(view.'@force'=='true' ? 'force' : '')+" view ${oid(view.'@name')} "+'('+view.columns.column.collect{ col-> oid(col.'@name') }.join(',')+')'+" as ${view.text.text()}";
           
           return [
                           type: 'create_view',
@@ -77,7 +77,7 @@ class ViewHelper extends OraDdlHelper
       {
           return [
                           type: 'create_view',
-                           ddl: "drop view ${view.'@name'}",
+                           ddl: "drop view ${oid(view.'@name')}",
                    privMessage: "You need to: grant drop view to ${username}"
                  ];
 

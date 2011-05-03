@@ -79,6 +79,30 @@ abstract class OraDdlHelper
           return type
       }
       
+      public oid(xmlIdentifier,quote=true)
+      {
+		  if (xmlIdentifier==null)
+		    return null
+			
+          if (xmlIdentifier.startsWith('!'))
+            return (quote ? '"'+xmlIdentifier.substring(1)+'"' : xmlIdentifier.substring(1))
+          else
+            return xmlIdentifier
+      }
+      
+      public xid(oracleIdentifier)
+      {
+		  if (oracleIdentifier==null)
+		    return null
+			
+          if (oracleIdentifier!=oracleIdentifier.toUpperCase()
+              ||(oracleIdentifier==~'.* .*')
+              ||(oracleIdentifier==~'^[^A-Z].*'))
+            return '!'+oracleIdentifier
+          else
+            return oracleIdentifier.toLowerCase()
+      }
+
       public reorder(changes)
       {
           return changes
