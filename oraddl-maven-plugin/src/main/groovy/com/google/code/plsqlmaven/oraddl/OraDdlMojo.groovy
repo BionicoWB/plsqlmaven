@@ -91,7 +91,7 @@ public abstract class OraDdlMojo
     */
     public String getSourceDirectory()
     {
-       return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema"+File.separator;
+       return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema";
     }
     
     public getSchemaSourceFiles()
@@ -121,4 +121,25 @@ public abstract class OraDdlMojo
          
         return schemaUtils;
     }
+	
+	public oid(xmlIdentifier,quote=true)
+	{
+		return getSchemaUtils().getHelper('table').oid(xmlIdentifier,quote)
+	}
+	
+	public xid(oracleIdentifier)
+	{
+		return getSchemaUtils().getHelper('table').xid(oracleIdentifier)
+	}
+	
+	public mlc(multiLineText)
+	{
+		def np= multiLineText.indexOf("\n")
+		def initial= '';
+		
+		while (multiLineText[np++]==' '){ initial+= ' ' }
+		
+		return multiLineText.replaceAll('^'+initial,'')
+	}
+
 }

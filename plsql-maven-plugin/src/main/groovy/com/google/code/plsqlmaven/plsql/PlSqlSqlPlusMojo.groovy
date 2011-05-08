@@ -74,7 +74,7 @@ public class PlSqlSqlPlusMojo
         {
             sourceFile ->
             
-            sqlScript << sourceFile.getText()
+            sqlScript << sourceFile.getText().replace('\r','')
             
             sqlScript << "\n\n"
         }

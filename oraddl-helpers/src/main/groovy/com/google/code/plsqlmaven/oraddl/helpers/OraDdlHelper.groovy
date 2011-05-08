@@ -23,25 +23,27 @@ import groovy.sql.Sql
  */
 abstract class OraDdlHelper
 {
-      protected Sql sql;
-      protected log;
-      protected username;
-      
+	  public static INDENT= '    '
+      protected Sql sql
+      protected log
+      protected username
+	  protected parser= new XmlParser();
+	  
       public OraDdlHelper(sql,log,username)
       {
-          this.sql= sql;
-          this.log= log;
-          this.username= username;
+          this.sql= sql
+          this.log= log
+          this.username= username
       }
       
       public rd(v,d)
       {
-          return (v==d ? null : v);
+          return (v==d ? null : v)
       }
       
       public dv(v,d)
       {
-          return (v ? v : d);
+          return (v ? v : d)
       }
       
       public cmp(source,target,attr=null,dval=null)
@@ -50,7 +52,7 @@ abstract class OraDdlHelper
           def v2= dv((attr ? target."@${attr}" : target),dval)
           
           log.debug "@${attr} cmp: "+v1?.toString()+'=='+v2?.toString()
-          return (v1?.toString()==v2?.toString());
+          return (v1?.toString()==v2?.toString())
       }
    
       public getColumnType(col)
@@ -79,20 +81,27 @@ abstract class OraDdlHelper
           return type
       }
       
-      public oid(xmlIdentifier,quote=true)
+	  /**
+	   * Conversion from xml style identifiers to oracle style identifiers
+	   * 
+	   * @param xmlIdentifier the identifier to convert
+	   * @param identifier true if the return value should be used in sql as an identifier
+	   *                   false if the return value should be used as a string for comparison (e.g. in a catalog query)
+	   */
+      public oid(xmlIdentifier,identifier=true)
       {
-		  if (xmlIdentifier==null)
+		  if (xmlIdentifier==null||(!xmlIdentifier instanceof String))
 		    return null
 			
           if (xmlIdentifier.startsWith('!'))
-            return (quote ? '"'+xmlIdentifier.substring(1)+'"' : xmlIdentifier.substring(1))
+            return (identifier ? '"'+xmlIdentifier.substring(1)+'"' : xmlIdentifier.substring(1))
           else
-            return xmlIdentifier
+            return (identifier ? xmlIdentifier : xmlIdentifier.toUpperCase())
       }
       
       public xid(oracleIdentifier)
       {
-		  if (oracleIdentifier==null)
+		  if (oracleIdentifier==null||oracleIdentifier.startsWith('SYS_'))
 		    return null
 			
           if (oracleIdentifier!=oracleIdentifier.toUpperCase()
@@ -102,7 +111,7 @@ abstract class OraDdlHelper
           else
             return oracleIdentifier.toLowerCase()
       }
-
+	  
       public reorder(changes)
       {
           return changes

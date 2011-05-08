@@ -42,7 +42,7 @@ class DDLWriterThread extends Thread
                { 
                    change ->
                    
-                   ddl << (change.failSafe ? makeFailSafe(change.ddl) : change.ddl)+"\n/\n\n"
+                   ddl << mlc(change.failSafe ? makeFailSafe(change.ddl) : change.ddl)+"\n/\n\n"
                     
                }
            }
@@ -51,11 +51,24 @@ class DDLWriterThread extends Thread
        private makeFailSafe(ddl)
        {
            def ddlEscaped= ddl.replaceAll("'","''");
-           return """begin
-                       execute immediate '${ddlEscaped}';
-                     exception
-                      when others then
-                        null;
-                     end;"""
+           return mlc("""-- failsafe ddl
+                         begin
+                          execute immediate '${ddlEscaped}';
+                         exception
+                           when others then
+                             null;
+                         end;""")
        }
+	   
+      public mlc(multiLineText)
+	  {   
+		  if (multiLineText.indexOf("\n")==-1)
+		    return multiLineText
+			
+		  def torm= (multiLineText =~ '(?m)^ *')
+		  
+		  if (torm.size()>1)
+		    return multiLineText.replaceAll(torm[1],'')
+      }
+
 }

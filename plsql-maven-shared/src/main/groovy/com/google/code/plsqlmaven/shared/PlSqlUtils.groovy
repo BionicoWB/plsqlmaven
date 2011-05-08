@@ -121,7 +121,7 @@ public class PlSqlUtils
     
     public compile(File source)
     {
-        def ddl= source.getText()
+        def ddl= source.getText().replace('\r','')
 		def sp= ddl.lastIndexOf("/")
 		
 		if (sp>0)

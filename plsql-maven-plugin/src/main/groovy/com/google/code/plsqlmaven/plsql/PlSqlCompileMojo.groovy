@@ -271,11 +271,23 @@ public class PlSqlCompileMojo
            }
         }
         
+		def recompiled= [:]
         sources.each()
         {
-           def ddl= "alter ${it.baseType} ${it.name} compile";
-           log.info("re-compiling: ${ddl}...")
-           sql.execute(ddl.toString()) // sql.execute uses GString to bind variables... so translate to a String
+		   if (!recompiled[it.baseType+'|'+it.name])
+		   {
+             def ddl= """begin
+                          execute immediate 'alter ${it.baseType} ${it.name} compile';
+                         exception
+                           when others then
+                             null;
+                         end;""";
+						 
+             log.info("re-compiling: ${it.baseType} ${it.name.toLowerCase()}...")
+		   
+             sql.execute(ddl.toString()) 
+			 recompiled[it.baseType+'|'+it.name]= true;
+		   }
         }
     }
 

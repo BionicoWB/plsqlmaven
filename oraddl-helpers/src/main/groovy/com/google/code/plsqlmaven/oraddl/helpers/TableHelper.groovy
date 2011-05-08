@@ -37,13 +37,22 @@ class TableHelper extends OraDdlHelper
           
           xml.table('name': xid(name))
           {
+			  def comment= sql.firstRow("select comments from user_tab_comments where table_name = ${name}")?.comments
+			  
+			  if (comment)
+			    xml.comment('')
+				{
+					out.print("<![CDATA[${comment}]]>")
+			    }
+			  
               xml.columns()
               {
-                  sql.eachRow("select * from user_tab_columns a where table_name = upper(${name}) order by column_id")
+                  sql.eachRow("select * from user_tab_columns a where table_name = ${name} order by column_id")
                   {
                      def col= it.toRowResult()
                      def p= col.data_type.indexOf('(')
-                     
+				 	 def colComment= sql.firstRow("select comments from user_col_comments where table_name = ${name} and column_name= ${col.column_name}")?.comments
+					 
                      xml.column('name':          xid(col.column_name),
                                 'type':          col.data_type.toLowerCase().substring(0,(p==-1?col.data_type.length():p)),
                                 'precision':     col.data_precision,
@@ -55,6 +64,13 @@ class TableHelper extends OraDdlHelper
                                 'check':         simpleCheck(col.column_name,constraints),
                                 'not-null':      simpleNotNull(col.column_name,constraints),
                                 'references':    simpleForeignKey(col.column_name,constraints))
+					 {
+					    if (colComment)
+						  xml.comment('')
+						  {
+							 out.print("<![CDATA[${colComment}]]>")
+						  }
+				     }
                   }
               }
               
@@ -70,7 +86,6 @@ class TableHelper extends OraDdlHelper
                                          'expression': constraint.search_condition,
                                          'on-delete': (constraint.delete_rule!='NO ACTION' ? constraint.delete_rule?.toLowerCase() : null))
                           {
-                              if (constraint.constraint_type!='C')
                               xml.columns()
                               {
                                   constraint.columns.each
@@ -85,7 +100,7 @@ class TableHelper extends OraDdlHelper
                               {
                                   
                                   xml.references('table': xid(constraint.rcolumns[0].table_name),
-                                                 'owner': constraint.rcolumns[0].owner==username.toUpperCase() ? null : xid(constraint.rcolumns[0].owner))
+                                                 'owner': xid(constraint.rcolumns[0].owner)==xid(username) ? null : xid(constraint.rcolumns[0].owner))
                                   {
                                       constraint.rcolumns.each
                                       {
@@ -99,6 +114,19 @@ class TableHelper extends OraDdlHelper
                           }
                       }
                   }
+                  
+               def triggers= sql.rows("select trigger_name from user_triggers a where table_name = ${name}");
+               
+               if (triggers.size()>0)   
+                   xml.triggers()
+                   {
+                       triggers.each
+                       {
+                          trigger ->
+                          
+                          xml.trigger('name': xid(trigger.trigger_name))
+                       }
+                   }
               
           }
           
@@ -109,7 +137,7 @@ class TableHelper extends OraDdlHelper
       {
           def constraints= []
           
-          sql.eachRow("select * from user_constraints a where table_name = upper(${tableName}) order by constraint_type")
+          sql.eachRow("select * from user_constraints a where table_name = upper(${tableName}) order by decode(constraint_type,'P',1,'U',2,'R',3,4)")
           {
              def cons= it.toRowResult()
              cons['columns']= []
@@ -174,7 +202,7 @@ class TableHelper extends OraDdlHelper
           {          
              constraints.remove fk
              def rcol= fk.rcolumns[0]             
-             return ((username.toUpperCase()!=rcol.owner ? xid(rcol.owner)+'.' : '')+xid(rcol.table_name)+(rcol.column_name!= columnName ? '.'+xid(rcol.column_name) : ''))
+             return ((xid(username)!=xid(rcol.owner) ? xid(rcol.owner)+'.' : '')+xid(rcol.table_name)+(rcol.column_name!= columnName ? '.'+xid(rcol.column_name) : ''))
           }
           
           return null
@@ -209,15 +237,15 @@ class TableHelper extends OraDdlHelper
           def colInPk= (boolean)constraints.find{ constraint -> (constraint.constraint_type=='P'
                                                                  &&constraint.columns.find{ column -> (column.column_name==columnName) }) }
           
-          def constraint= constraints.find{ constraint -> (constraint.constraint_type=='C'
+          def constraint= constraints.findAll{ constraint -> (constraint.constraint_type=='C'
                                                  && constraint.columns.find{ column -> (column.column_name==columnName) }
                                                  && constraint.columns.size()==1
                                                  && constraint.generated.startsWith('GENERATED') 
                                                  && isNotNullSearchCondition(constraint.search_condition,columnName)) } 
           
-          if (constraint)
+          if (constraint.size()>0)
           {
-            constraints.remove constraint
+            constraint.each { c -> constraints.remove c } // it is possible to find doubled check not null constraint on the same column
             return colInPk ? null : 'true'
           }
           else
@@ -228,7 +256,7 @@ class TableHelper extends OraDdlHelper
       public boolean exists(table)
       {
            def exists= false;
-           sql.eachRow("select 1 from user_tables where table_name= upper(${oid(table.'@name',false)})")
+           sql.eachRow("select 1 from user_tables where table_name= ${oid(table.'@name',false)}")
            { exists= true }
            
            return exists
@@ -237,28 +265,60 @@ class TableHelper extends OraDdlHelper
       public create(table)
       {
           def changes= []
+		  
+		  def maxLength= 0;
+		  
+		  table.columns.column.each
+		  { 
+			  col -> 
+			  
+			  def l=oid(col.'@name').length() 
+			  
+			  if (l>maxLength)
+			    maxLength= l
+		  }
+		  
+		  def spaces= 
+		  {
+		      col ->
+			  
+			  def sp= ''
+			  
+			  (maxLength-oid(col.'@name').length()+2).times{ sp+=' ' }
+			  
+			  return sp
+		  }
           
           changes << [
                               type: 'create_table',
-                               ddl: 'create table '+oid(table.'@name')+'('+table.columns.column.collect{ col-> oid(col.'@name')+' '+getColumnType(col) }.join(',')+')',
+                               ddl: 'create table '+oid(table.'@name')+'\n(\n'+INDENT+table.columns.column.collect{ col-> oid(col.'@name')+spaces(col)+getColumnType(col) }.join(',\n'+INDENT)+'\n)',
                        privMessage: "You need to: grant create table to ${username}"         
                      ]
           
+		  if (table.comment)
+   		    changes << set_table_comment(table)
+
           table.columns.column.each
           {
               column ->
+			  
+			  if (column.comment)
+	    		    changes << set_column_comment(table,column)
               
               if (column.'@primary'=='true')
-                changes << add_simple_primary(table,column)
+                changes << add_constraint(table,col_to_primary(column))
 
               if (column.'@not-null'=='true')
-                changes << add_simple_notnull(table,column)
+                changes << add_constraint(table,col_to_check(column,column.'@name'+' is not null'))
 
               if (column.'@unique'=='true')
-                changes << add_simple_unique(table,column)
+                changes << add_constraint(table,col_to_unique(column))
+                
+              if (column.'@check')
+                changes << add_constraint(table,col_to_check(column,column.'@check'))
                 
               if (column.'@references')
-                changes << add_simple_foreign(table,column)
+                changes << add_constraint(table,col_to_foreign(column))
 
           }
           
@@ -268,7 +328,7 @@ class TableHelper extends OraDdlHelper
               
               changes << add_constraint(table,constraint)
           }
-          
+		  
           return changes
       }
       
@@ -276,6 +336,9 @@ class TableHelper extends OraDdlHelper
       {
           def changes= [];
           
+		  if (source.comment?.text()!=target.comment?.text())
+		    changes << set_table_comment(target)
+		  
           target.columns.column.each
           {
                 targetCol ->
@@ -283,9 +346,33 @@ class TableHelper extends OraDdlHelper
                 def sourceCol= source.columns.column.find({ col -> col.'@name'== targetCol.'@name' })
                 
                 if (!sourceCol)
-                    changes << add_column(target,targetCol)
+                {
+                      changes << add_column(target,targetCol)
+                    
+					  if (targetCol.comment)
+						changes << set_column_comment(target,targetCol)
+	
+	                  if (targetCol.'@primary'=='true')
+	                    changes << add_constraint(target,col_to_primary(targetCol))
+	    
+	                  if (targetCol.'@not-null'=='true')
+	                    changes << add_constraint(target,col_to_check(targetCol,targetCol.'@name'+' is not null'))
+	    
+	                  if (targetCol.'@unique'=='true')
+	                    changes << add_constraint(target,col_to_unique(targetCol))
+	                    
+	                  if (targetCol.'@check')
+	                    changes << add_constraint(target,col_to_check(targetCol,targetCol.'@check'))
+	                    
+	                  if (targetCol.'@references')
+	                    changes << add_constraint(target,col_to_foreign(targetCol))
+    
+                }
                 else
                 {
+					if (sourceCol.comment?.text()!=targetCol.comment?.text())
+		   			   changes << set_column_comment(target,targetCol)
+		
                     if (  !cmp(sourceCol,targetCol,'type')
                         ||!cmp(sourceCol,targetCol,'precision')
                         ||!cmp(sourceCol,targetCol,'scale')
@@ -294,62 +381,63 @@ class TableHelper extends OraDdlHelper
                       changes += modify_column(target,targetCol,sourceCol)
                     
                     if (!cmp(sourceCol,targetCol,'primary','false'))
-                      changes += modify_simple_primary(target,targetCol)
+                      modify_simple_primary(changes,target,targetCol,sourceCol)
 
                     if (!cmp(sourceCol,targetCol,'unique','false'))
-                      changes += modify_simple_unique(target,targetCol)
+                      modify_simple_unique(changes,target,targetCol,sourceCol)
 
                     if (!cmp(sourceCol,targetCol,'check'))
-                      changes += modify_simple_check(target,targetCol)
+                      modify_simple_check(changes,target,targetCol,sourceCol)
                       
                     if (!cmp(sourceCol,targetCol,'not-null','false'))
-                      changes += modify_simple_notnull(target,targetCol)
+                      modify_simple_notnull(changes,target,targetCol,sourceCol)
 
                     if (!cmp(sourceCol,targetCol,'references'))
-                      changes += modify_simple_foreign(target,targetCol)
+                      modify_simple_foreign(changes,target,targetCol,sourceCol)
                 }
           }
 
-		  def renamedConstraints= []
+          def renamedConstraints= []
           
           source.constraints.constraint.findAll{ c -> (!(c.'@name' in target.constraints.constraint*.'@name')) }.each
           {
                 constraint ->
 
-				def rename= false;
-				def targetCons;
-				
-				if (constraint.'@type'=='primary') 
-				{
-					targetCons= target.constraints.constraint.find{ c -> (c.'@type'=='primary') }
-					
-					try
-					{
-						if (constraint.columns.column.size()!=targetCons.columns.column.size())
-	    					    throw new ContextException('column count differs')
-					    else
-							targetCons.columns.column.eachWithIndex
-							{
-								targetCol, index ->
-								
-								def sourceCol= constraint.columns.column[index];
-								
-								if (!cmp(sourceCol,targetCol,'name'))
-								  throw new ContextException('columns differs')
-							}
-							
-					    rename= true;
-					}
-					catch (ContextException cex)
-					{}
-			    }
-				
-				if (rename)
-				{
-				  renamedConstraints << targetCons.'@name'
+                def rename= false;
+                def targetCons;
+                
+                if (constraint.'@type'=='primary') 
+                {
+                    targetCons= target.constraints.constraint.find{ c -> (c.'@type'=='primary') }
+                    
+                    if (targetCons)
+                    try
+                    {
+                        if (constraint.columns.column.size()!=targetCons.columns.column.size())
+                                throw new ContextException('column count differs')
+                        else
+                            targetCons.columns.column.eachWithIndex
+                            {
+                                targetCol, index ->
+                                
+                                def sourceCol= constraint.columns.column[index];
+                                
+                                if (!cmp(sourceCol,targetCol,'name'))
+                                  throw new ContextException('columns differs')
+                            }
+                            
+                        rename= true;
+                    }
+                    catch (ContextException cex)
+                    {}
+                }
+                
+                if (rename)
+                {
+                  renamedConstraints << targetCons.'@name'
                   changes << rename_constraint(target,constraint,targetCons);
-				}
-				else                
+                }
+                else                
                   changes << drop_constraint(target,constraint);
           }
               
@@ -359,7 +447,7 @@ class TableHelper extends OraDdlHelper
               
               changes << drop_column(target,column)
           }
-		  
+          
           target.constraints.constraint.each
           {
                  targetCons ->
@@ -367,10 +455,10 @@ class TableHelper extends OraDdlHelper
                  def sourceCons= source.constraints.constraint.find{ c-> (c.'@name'==targetCons.'@name')}
                  
                  if (!sourceCons)
-				 {
-					 if (!targetCons.'@name' in renamedConstraints)
+                 {
+                     if (!targetCons.'@name' in renamedConstraints)
                        changes << add_constraint(target,targetCons)
-				 }
+                 }
                  else
                  {
                      try
@@ -422,11 +510,30 @@ class TableHelper extends OraDdlHelper
                      
           }
           
+          source.triggers.trigger.each
+          {
+              sourceTrigger ->
+              
+              def targetTrigger= target.triggers.trigger.find{ t-> (t.'@name'==sourceTrigger.'@name')}
+              
+              if (!targetTrigger)
+                changes << drop_trigger(source,sourceTrigger)
+          }
+          
           return changes
       }
    
       
       /*   CHANGES    */
+      
+      public drop_trigger(table,trigger)
+      {
+           return [
+                            type: 'drop_trigger',
+                             ddl: "alter table ${oid(table.'@name')} drop trigger ${oid(trigger.'@name')}",
+                     privMessage: "You need to: grant alter table to ${username}"
+                  ]
+      }
       
       public drop_column(table,column)
       {
@@ -453,7 +560,7 @@ class TableHelper extends OraDdlHelper
           else
           if (targetCol.'@type'=='number'&&sourceCol.'@type'=='number'&&
               ((!cmp(sourceCol,targetCol,'precision')
-                  &&(!(dv(targetCol.'@precision'.toInteger(),9999999)>dv(sourceCol.'@precision'.toInteger(),9999999))))
+                  &&(!(dv(targetCol.'@precision'?.toInteger(),9999999)>dv(sourceCol.'@precision'?.toInteger(),9999999))))
               ||!cmp(sourceCol,targetCol,'scale',0)))
           {
               changes+= column_number_reduce_precision(table,targetCol);
@@ -486,20 +593,20 @@ class TableHelper extends OraDdlHelper
       
       public add_constraint(table,constraint)
       {
-          def ddl= "alter table ${oid(table.'@name')} add constraint ${oid(constraint.'@name')} ";
+          def ddl= "alter table ${oid(table.'@name')} add "+(constraint.'@name' ? "constraint ${oid(constraint.'@name')}\n" : '');
           
           if (constraint.'@type'=='primary')
               ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"
           else
           if (constraint.'@type'=='foreign')
           {
-              ddl+="foreign key ("+constraint.columns.column*.'@name'.join(',')+")"
+              ddl+="foreign key ("+constraint.columns.column*.'@name'.join(',')+")\n"
               def owner= constraint.references[0].'@owner'
-              ddl+=" references "+( owner&&owner!=username ? owner+'.' : '' )+constraint.references[0].'@table'
+              ddl+="references "+( owner&&owner!=username ? owner+'.' : '' )+constraint.references[0].'@table'
               ddl+='('+constraint.references.column*.'@name'.join(',')+')'
               
               if (dv(constraint.'@on-delete','no action')!='no action')
-                ddl+=' on delete '+constraint.'@on-delete'
+                ddl+='\non delete '+constraint.'@on-delete'
           }
           else
           if (constraint.'@type'=='check')
@@ -513,7 +620,7 @@ class TableHelper extends OraDdlHelper
                          type: 'add_constraint',
                           ddl: ddl,
                   privMessage: "You need to: grant alter table to ${username}",
-				   constraint: [type: constraint.'@type']
+                   constraint: [type: constraint.'@type']
                  ]
 
       }
@@ -526,14 +633,135 @@ class TableHelper extends OraDdlHelper
                        privMessage: "You need to: grant alter table to ${username}"
                  ]
       }
+	  
+	  public drop_primary_constraint(table,constraint)
+	  {
+		  return [
+							  type: 'drop_constraint',
+							   ddl: "alter table ${oid(table.'@name')} drop primary key cascade",
+					   privMessage: "You need to: grant alter table to ${username}"
+				 ]
+	  }
+
+	  public drop_unique_constraint(table,constraint)
+	  {
+
+		  def position=1;		  
+		  def positionQuery= constraint.columns.column.collect{ """select constraint_name from user_cons_columns where column_name= '${oid(it.'@name',false)}' and position= ${position++} and table_name= v_table""" }.join(' intersect ')
+		  
+          return [
+                              type: 'drop_constraint',
+                               ddl: """-- drop unique constraint on ${oid(table.'@name')}(${constraint.columns.column.collect{ oid(it.'@name') }.join(',')})
+                                       declare
+                                         v_table       varchar2(30):= '${oid(table.'@name',false)}';
+                                         v_constraint  varchar2(30);
+                                       begin
+                                         
+                                         select constraint_name
+                                           into v_constraint
+                                           from user_constraints
+                                          where constraint_name in (${positionQuery})
+                                            and constraint_type= 'U'
+                                            and generated= 'GENERATED NAME';
+                                         
+                                         execute immediate 'alter table "'||v_table||'" drop constraint "'||v_constraint||'" cascade';
+                                       
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
+	  }
+
+	  public drop_check_constraint(table,constraint)
+	  {
+
+		  def position=1;		  
+		  def columnNames= constraint.columns.column.collect{ "'"+oid(it.'@name',false)+"'" }.join(',')
+		  
+          return [
+                              type: 'drop_constraint',
+                               ddl: """-- drop check constraint (${constraint.'@expression'}) on ${oid(table.'@name')}
+                                       declare
+                                         v_table             varchar2(30):= '${oid(table.'@name',false)}';
+                                         v_constraint        varchar2(30);
+                                         v_search_condition  varchar2(32767):= '${constraint.'@expression'}';
+                                       begin
+                                         
+                                             for c_cur in (select constraint_name,
+                                                                  search_condition
+                                                             from user_constraints
+                                                            where constraint_name in (select distinct constraint_name
+                                                                                        from user_cons_columns a
+                                                                                       where column_name in (${columnNames})
+                                                                                         and position is null
+                                                                                         and table_name= v_table) 
+                                                              and generated= 'GENERATED NAME'
+                                                              and constraint_type= 'C')
+                                             loop
+                                              if c_cur.search_condition= v_search_condition then
+                                                execute immediate 'alter table "'||v_table||'" drop constraint "'||c_cur.constraint_name||'"';
+                                              end if;
+                                             end loop;
+                                         
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
+	  }
+	  
+	  public drop_foreign_constraint(table,constraint)
+	  {
+
+		  def position=1;		  
+		  def positionQuery= constraint.columns.column.collect{ """select constraint_name from user_cons_columns where column_name= '${oid(it.'@name',false)}' and position= ${position++} and table_name= v_table""" }.join(' intersect ')
+		  position=1;
+		  def rPositionQuery= constraint.references.column.collect{ """select constraint_name from all_cons_columns where column_name= '${oid(it.'@name',false)}' and position= ${position++} and table_name= v_r_table and owner= v_r_owner""" }.join(' intersect ')
+		  
+          return [
+                              type: 'drop_constraint',
+                               ddl: """-- drop foreign constraint on ${oid(table.'@name')}(${constraint.columns.column.collect{ oid(it.'@name') }.join(',')}) to ${oid(constraint.references[0].'@table')}(${constraint.references.column.collect{ oid(it.'@name') }.join(',')}) 
+                                       declare
+                                         v_table       varchar2(30):= '${oid(table.'@name',false)}';
+                                         v_r_table     varchar2(30):= '${oid(constraint.references[0].'@table',false)}';
+                                         v_r_owner     varchar2(30):= '${oid(constraint.references[0].'@owner',false)}';
+                                         v_constraint  varchar2(30);
+                                       begin
+                                       
+                                         if v_r_owner is null then
+                                           v_r_owner:= user;
+                                         end if;
+                                         
+                                         select constraint_name
+                                           into v_constraint
+                                           from user_constraints
+                                          where constraint_name in (${positionQuery})
+                                            and constraint_type= 'R'
+                                            and generated= 'GENERATED NAME'
+                                            and r_constraint_name = (select constraint_name
+                                                                       from all_constraints
+                                                                      where constraint_name in (select constraint_name
+										                                                         from all_cons_columns a
+										                                                        where (${rPositionQuery})
+										                                                          and owner = v_r_owner)
+										                               and constraint_type in ('P','U')
+										                               and owner = v_r_owner);
+                           
+                                         
+                                         execute immediate 'alter table "'||v_table||'" drop constraint "'||v_constraint||'"';
+                                       
+                                       end;""",
+                       privMessage: "You need to: grant alter table to ${username}"
+                 ]
+	  }
 
 	  public drop_constraint(table,constraint)
       {
-          return [
-                              type: 'drop_constraint',
-                               ddl: "alter table ${oid(table.'@name')} drop constraint ${oid(constraint.'@name')} cascade",
-                       privMessage: "You need to: grant alter table to ${username}"
-                 ]
+		  if (constraint.'@name')
+	          return [
+	                              type: 'drop_constraint',
+	                               ddl: "alter table ${oid(table.'@name')} drop constraint ${oid(constraint.'@name')} cascade",
+	                       privMessage: "You need to: grant alter table to ${username}"
+	                 ]
+		  else
+			  return "drop_${constraint.'@type'}_constraint"(table,constraint)
       }
       
       public modify_constraint(table,constraint,cause=null)
@@ -541,221 +769,93 @@ class TableHelper extends OraDdlHelper
           return [drop_constraint(table,constraint),
                   add_constraint(table,constraint)]
       }
-      
-      public add_simple_primary(table,column)
-      {
-          return [
-                              type: 'add_constraint',
-                               ddl: "alter table ${oid(table.'@name')} add primary key (${oid(column.'@name')})",
-                       privMessage: "You need to: grant alter table to ${username}",
-				        constraint: [type: 'primary']
-                 ]
+	  
+	  public col_to_primary(column)
+	  {
+		  return parser.parseText('<constraint type="primary"><columns><column name="'+column.'@name'+'"/></columns></constraint>')
       }
+	  
+	  public col_to_unique(column)
+	  {
+		  return parser.parseText('<constraint type="unique"><columns><column name="'+column.'@name'+'"/></columns></constraint>')
+	  }
 
-      public drop_simple_primary(table,column)
-      {
-          return [
-                              type: 'drop_constraint',
-                               ddl: "alter table ${oid(table.'@name')} drop primary key cascade",
-                       privMessage: "You need to: grant alter table to ${username}"
-                 ]
-      }
-      
-      public modify_simple_primary(table,column)
-      {
-          return [drop_simple_primary(table,column),
-                  add_simple_primary(table,column)]
-      }
+	  public col_to_check(column,expression)
+	  {
+		  return parser.parseText('<constraint type="check" expression="'+expression+'"><columns><column name="'+column.'@name'+'"/></columns></constraint>')
+	  }
 
-      public add_simple_unique(table,column)
+	  public col_to_foreign(column)
+	  {
+		  def ref= column.'@references'.split('\\.')
+		  def rowner= ''
+		  def rtable= ''
+		  def rcolumn= ''
+		  
+		  if (ref.length==3)
+		  {
+		      rowner= ref[0]
+		      rtable= ref[1]
+		      rcolumn= ref[2]
+		  }
+		  else
+		  if (ref.length==2)
+		  {
+		      rtable= ref[0]
+		      rcolumn= ref[1]
+	      }
+		  else
+		  {
+		      rtable= ref[0]
+		      rcolumn= column.'@name'
+		  }
+		  
+		  return parser.parseText('<constraint type="foreign"><columns><column name="'+column.'@name'+'"/></columns><refercences table="'+rtable+'" owner="'+rowner+'"><column name="'+rcolumn+'"/></refercences></constraint>')
+	  }
+	  
+	  public modify_simple_primary(changes,table,targetCol,sourceCol)
       {
-          return [
-                              type: 'add_constraint',
-                               ddl: "alter table ${oid(table.'@name')} add unique (${oid(column.'@name')})",
-                       privMessage: "You need to: grant alter table to ${username}",
-				        constraint: [type: 'unique']
-                 ]
-      }
-
-      public drop_simple_unique(table,column)
-      {
-          return [
-                              type: 'drop_constraint',
-                               ddl: """declare
-                                         v_constraint  varchar2(30);
-                                       begin
-                                         
-                                         select a.constraint_name
-                                           into v_constraint
-                                           from user_constraints a,
-                                                user_cons_columns b
-                                          where a.constraint_name= b.constraint_name
-                                            and a.table_name= b.table_name
-                                            and a.table_name= upper('${oid(table.'@name',false)}')
-                                            and b.column_name= upper('${oid(column.'@name',false)}')
-                                            and a.generated= 'GENERATED NAME'
-                                            and a.constraint_type= 'U'
-                                            and rownum < 2;
-                                         
-                                         execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||v_constraint||'";
-                                         
-                                       end;""",
-                       privMessage: "You need to: grant alter table to ${username}"
-                 ]
-      }
-      
-      public modify_simple_unique(table,column)
-      {
-          return [drop_simple_unique(table,column),
-                  add_simple_unique(table,column)]
-      }
-
-      public add_simple_check(table,column)
-      {
-          return [
-                              type: 'add_constraint',
-                               ddl: "alter table ${oid(table.'@name')} add check (${oid(column.'@name')})",
-                       privMessage: "You need to: grant alter table to ${username}",
-				        constraint: [type: 'check']
-                 ]
-      }
-
-      public drop_simple_check(table,column)
-      {
-          return [
-                              type: 'drop_constraint',
-                               ddl: """declare
-                                         v_constraint  varchar2(30);
-                                       begin
-                                         
-                                           select a.constraint_name
-                                             into v_constraint
-                                             from user_constraints a,
-                                                  user_cons_columns b
-                                            where a.constraint_name= b.constraint_name 
-                                              and b.column_name= upper('${oid(column.'@name',false)}')
-                                              and a.table_name= b.table_name
-                                              and a.table_name= upper('${oid(table.'@name',false)}')
-                                              and a.generated= 'GENERATED NAME'
-                                              and a.constraint_type= 'C'
-                                              and (select count(*) 
-                                                     from user_cons_columns
-                                                    where constraint_name= a.constraint_name)= 1;
-                                         
-                                         execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||v_constraint||'"';
-                                         
-                                       end;""",
-                       privMessage: "You need to: grant alter table to ${username}"
-                 ]
-      }
-
-      public modify_simple_check(table,column)
-      {
-          return [drop_simple_check(table,column),
-                  add_simple_check(table,column)]
+          if (sourceCol.'@primary'=='true')
+            changes << drop_constraint(table,col_to_primary(sourceCol))
           
+          if (targetCol.'@primary'=='true')
+            changes << add_constraint(table,col_to_primary(targetCol))
       }
 
-      public add_simple_notnull(table,column)
+      public modify_simple_unique(changes,table,targetCol,sourceCol)
       {
-          return [
-                              type: 'add_constraint',
-                               ddl: "alter table ${oid(table.'@name')} add check (${oid(column.'@name')} is not null)",
-                       privMessage: "You need to: grant alter table to ${username}",
-				        constraint: [type: 'not-null']
-                 ]
+          if (sourceCol.'@unique'=='true')
+            changes << drop_constraint(table,col_to_unique(sourceCol))
+            
+           if (targetCol.'@unique'=='true')
+            changes << add_constraint(table,col_to_unique(targetCol))
       }
 
-      public drop_simple_notnull(table,column)
+      public modify_simple_check(changes,table,targetCol,sourceCol)
       {
-          return [
-                              type: 'drop_constraint',
-                               ddl: """declare
-                                         v_constraint  varchar2(30);
-                                       begin
-                                         
-                                             for c_cur in (select a.constraint_name,
-                                                                  a.search_condition,
-                                                                  b.column_name
-                                                             from user_constraints a,
-                                                                  user_cons_columns b
-                                                            where a.constraint_name= b.constraint_name 
-                                                              and b.column_name= upper('${oid(column.'@name',false)}')
-                                                              and a.table_name= b.table_name
-                                                              and a.table_name= upper('${oid(table.'@name',false)}')
-                                                              and a.generated= 'GENERATED NAME'
-                                                              and a.constraint_type= 'C'
-                                                              and (select count(*) 
-                                                                     from user_cons_columns
-                                                                    where constraint_name= a.constraint_name)= 1)
-                                             loop
-                                              if c_cur.search_condition= '"'||c_cur.column_name||'" IS NOT NULL' then
-                                                execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||c_cur.constraint_name||'"';
-                                              end if;
-                                             end loop;
-                                         
-                                       end;""",
-                       privMessage: "You need to: grant alter table to ${username}"
-                 ]
-      }
-      
-      public modify_simple_notnull(table,column)
-      {
-          return [drop_simple_notnull(table,column),
-                  add_simple_notnull(table,column)]
+          if (sourceCol.'@check')
+            changes << drop_constraint(table,col_to_check(sourceCol,sourceCol.'@check'))
+            
+          if (targetCol.'@check')
+            changes << add_constraint(table,col_to_check(targetCol,targetCol.'@check'))
       }
 
-      public add_simple_foreign(table,column)
+      public modify_simple_notnull(changes,table,targetCol,sourceCol)
       {
-          def ref= column.'@references'.split('\\.')
-          def references;
-          
-          if (ref.length==3)
-            references= oid(ref[0])+'.'+oid(ref[1])+'('+oid(ref[2])+')'
-          else
-          if (ref.length==2)
-            references= oid(ref[0])+'('+oid(ref[1])+')'
-          else
-            references= oid(ref[0])+'('+oid(column.'@name')+')'
-  
-          return [
-                              type: 'add_constraint',
-                               ddl: "alter table ${oid(table.'@name')} add foreign key (${oid(column.'@name')}) references ${references}",
-                       privMessage: "You need to: grant alter table to ${username}",
-					    constraint: [type: 'foreign']
-                 ]
+          if (sourceCol.'@not-null'=='true')
+            changes << drop_constraint(table,col_to_check(sourceCol,sourceCol.'@name'+' is not null'))
+            
+          if (targetCol.'@not-null'=='true')
+            changes << add_constraint(table,col_to_check(targetCol,targetCol.'@name'+' is not null'))
       }
 
-      public drop_simple_foreign(table,column)
+      public modify_simple_foreign(changes,table,targetCol,sourceCol)
       {
-          return [
-                              type: 'drop_constraint',
-                               ddl: """declare
-                                         v_constraint  varchar2(30);
-                                       begin
-                                         
-                                           select a.constraint_name
-                                             into v_constraint
-                                             from user_constraints a,
-                                                  user_cons_columns b
-                                            where a.constraint_name= b.constraint_name
-                                              and a.table_name= b.table_name
-                                              and a.table_name= upper('${oid(table.'@name',false)}')
-                                              and b.column_name= upper('${oid(column.'@name',false)}')
-                                              and a.generated= 'GENERATED NAME'
-                                              and a.constraint_type= 'R';
-                                                                                                                           
-                                         execute immediate 'alter table ${oid(table.'@name')} drop constraint "'||v_constraint||'"';
-                                         
-                                       end;""",
-                       privMessage: "You need to: grant alter table to ${username}"
-                 ]
-      }
-
-      public modify_simple_foreign(table,column)
-      {
-          return [drop_simple_foreign(table,column),
-                  add_simple_foreign(table,column)]
+          if (sourceCol.'@references')
+            changes << drop_constraint(table,col_to_foreign(sourceCol))
+            
+          if (targetCol.'@references')
+            changes << add_constraint(table,col_to_foreign(targetCol))
       }
       
       public column_clob_to_varchar2(table,column)
@@ -764,18 +864,13 @@ class TableHelper extends OraDdlHelper
           def tempIndex= tempColIndex--;
           def columnType= getColumnType(column);
           
-          try
-          {
-             changes << [
-                             type: 'drop_maven_temporary_column',
-                         mainType: 'modify_column',
-                        tempIndex: tempIndex,
-                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
-                         failSafe: true
-                        ]
-          }
-          catch (Exception ex)
-          {}
+          changes << [
+	                         type: 'drop_maven_temporary_column',
+	                     mainType: 'modify_column',
+	                    tempIndex: tempIndex,
+	                          ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
+	                     failSafe: true
+                     ]
           
           changes << [
                               type: 'add_maven_temporary_column',
@@ -997,22 +1092,44 @@ class TableHelper extends OraDdlHelper
           return changes;
       }
 	  
-	  public reorder(changes)
+	  public set_table_comment(table)
 	  {
-		  def reordered= changes.clone()
+		  def escapedComment= table.comment?.text()?.replace("'","''")
 		  
-		  changes.each
-		  {
-			  change ->
-			  
-			  if (change.type=='add_constraint'&&change.constraint.type=='foreign')
-			  {
-				  reordered.remove(change)
-				  reordered << change
-		      }
-	      }
+		  return [
+					  type: 'table_comment',
+					   ddl: "comment on table ${oid(table.'@name')} is '${escapedComment}'",
+			   privMessage: "You need to: grant alter table to ${username}"
+                 ]
+      }
+      
+	  public set_column_comment(table,column)
+	  {
+		  def escapedComment= column.comment?.text()?.replace("'","''")
 		  
-		  return reordered
+		  return [
+					  type: 'column_comment',
+					   ddl: "comment on column ${oid(table.'@name')}.${oid(column.'@name')} is '${escapedComment}'",
+			   privMessage: "You need to: grant alter table to ${username}"
+                 ]
+      }
+	  
+      public reorder(changes)
+      {
+          def reordered= changes.clone()
+          
+          changes.each
+          {
+              change ->
+              
+              if (change&&change.type=='add_constraint'&&change.constraint.type=='foreign')
+              {
+                  reordered.remove(change)
+                  reordered << change
+              }
+          }
+          
+          return reordered
       }
       
 }
