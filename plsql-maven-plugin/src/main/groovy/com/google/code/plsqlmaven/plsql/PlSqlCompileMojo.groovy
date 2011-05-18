@@ -112,6 +112,8 @@ public class PlSqlCompileMojo
                 
                 disconnectFromDatabase();
             }
+			else
+			   success= true
                 
             touchReferenceFile();
             
@@ -194,12 +196,13 @@ public class PlSqlCompileMojo
                   this.logError(error);
                   
                   if (error.type=='error') 
-                    success=false;
+                    success=false
                 }
              }    
         }
         
-        return success;
+		log.debug 'success: '+success
+        return success
     }
     
     private buildXmlReport()

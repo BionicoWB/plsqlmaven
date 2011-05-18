@@ -16,13 +16,13 @@ package com.google.code.plsqlmaven.shared;
  * limitations under the License.
  */
 
+
 import groovy.sql.Sql
 import java.io.File
 import java.sql.SQLException
 import com.google.code.plsqlmaven.oraddl.helpers.DDLException;
 import java.io.File;
 import groovy.xml.MarkupBuilder
-
 
 
 /**
@@ -168,12 +168,36 @@ public class SchemaUtils
         xml.omitNullAttributes = true
         xml.doubleQuotes = true
  
-        if (!helper.extract(name,xml))
+        if (!helper.extract(helper.oid(name,false),xml))
           return null
         else
           return parser.parseText(writer.toString())
     }
     
+    public extractFile(targetDir,type,name)
+    {
+		def ltype= type.toLowerCase()
+		def lname= name.toLowerCase()
+		def filePath= path("${targetDir}/${ltype}/${lname}.xml")
+		ant.mkdir(dir: filePath.substring(0,filePath.lastIndexOf(File.separator)))
+		ant.truncate(file: filePath)
+		File file= new File(filePath)
+		FileWriter writer= new FileWriter(file)
+		writer.write('<?xml version="1.0" encoding="UTF-8"?>'+"\n")
+		def xml = new MarkupBuilder(writer)
+		xml.omitNullAttributes = true
+		xml.doubleQuotes = true
+ 
+		if (!getHelper(ltype)?.extract(name,xml))
+		{
+		  writer.close()
+		  file.delete()
+		  return false
+		}
+		else
+		  return file
+    }
+	
     public getHelper(type)
     {
         def helper;
@@ -246,4 +270,9 @@ public class SchemaUtils
           return [o];
     }
     
+	public String path(p)
+	{
+		return p.replace('/',File.separator)
+	}
+
 }

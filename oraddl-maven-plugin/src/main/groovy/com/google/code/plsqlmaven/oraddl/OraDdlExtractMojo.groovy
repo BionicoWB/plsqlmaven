@@ -122,26 +122,12 @@ public class OraDdlExtractMojo
 	                                    
        sql.eachRow(objectsQuery)
        {
-           def type= it.object_type.toLowerCase()
-           def name= it.object_name.toLowerCase()
-           def sourceFilePath= path("${sourceDirectory}/${type}/${name}.xml")
-           ant.mkdir(dir: sourceFilePath.substring(0,sourceFilePath.lastIndexOf(File.separator)))
-           ant.truncate(file: sourceFilePath)
-           File file= new File(sourceFilePath)
-           FileWriter writer= new FileWriter(file)
-           writer.write('<?xml version="1.0" encoding="UTF-8"?>'+"\n")
-           def xml = new MarkupBuilder(writer)
-           xml.omitNullAttributes = true
-           xml.doubleQuotes = true
-    
-           if (!schemaUtils.getHelper(type)?.extract(it.object_name,xml))
-           {
-             writer.close()
-             file.delete()
-           }
-           else
-             log.info "extracted ${sourceFilePath}"
-           
+		   def file= schemaUtils.extractFile(sourceDirectory,
+			                                 it.object_type,
+											it.object_name)
+		   
+		   if (file)
+		     log.info "extracted ${file.absolutePath}"
        }
    }
    

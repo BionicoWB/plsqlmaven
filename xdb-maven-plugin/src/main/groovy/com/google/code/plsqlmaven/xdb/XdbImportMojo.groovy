@@ -35,6 +35,13 @@ public class XdbImportMojo
    */
     private boolean changedOnly;
     
+  /**
+   * Whether to loop waiting for changes, expressend in seconds between loops
+   * @since 1.0
+   * @parameter expression="${loop}"
+   */
+    private int loop;
+
    /**
     * Location of the touch file.
     */
@@ -52,9 +59,23 @@ public class XdbImportMojo
           fail('Need an Oracle connection')
           return
         }
-        getLastImportTime()
-        importFiles()
-        touchReferenceFile()
+		
+		def importThings= 
+		{ 
+	        getLastImportTime()
+	        importFiles()
+	        touchReferenceFile()
+		}
+
+		if (loop)
+		  while (true) 
+		  {
+			  importThings()
+			  Thread.currentThread().sleep(loop*1000)
+	      }
+		else
+		  importThings()
+		
         disconnectFromDatabase()
     }
     
