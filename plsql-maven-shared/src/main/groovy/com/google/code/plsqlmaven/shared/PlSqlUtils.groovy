@@ -172,5 +172,107 @@ public class PlSqlUtils
         if (!new File(rootDir+File.separator+'xdb').exists())
           importDirectory(rootDir+File.separator+'xdb')
     }
+	
+	public extractFile(targetDir,name,type)
+	{
+		def lname= name.toLowerCase()
+		def ltype= type.toLowerCase()
+		def ext= getTypeExt(ltype)
+		
+        if ((ltype =~ /^package/) || (ltype =~ /^type/))
+        {
+           def type_dir= get_dir(targetDir, ltype.split()[0])
+           
+	         if (! (name =~ /^SYS_PLSQL_/)) // plsql generated types from pipelined functions
+	         {
+	             def odir= get_dir(type_dir, lname)
+	             def target_file= new File(odir, lname+".${ext}"+PLSQL_EXTENSION)
+	             extract(name,ltype,target_file)
+	         }
+        }
+		else
+		if (ltype=='view')
+		{
+           def type_dir= get_dir(targetDir, ltype)
+           def target_file= new File(type_dir, lname+".${ext}"+PLSQL_EXTENSION)
+           extractView(name,target_file)
+	    }
+        else
+        {
+           def type_dir= get_dir(targetDir, ltype)
+           def target_file= new File(type_dir, lname+".${ext}"+PLSQL_EXTENSION)
+           extract(name,ltype,target_file)
+        }
+		
+    }
+	
+	
+	private extract(name,type,file)
+	{
+		  log.info "extracting: "+file.absolutePath+"..."
+		  
+		  ant.truncate(file: file.absolutePath)
+		  
+		  file << "create or replace "
+		  
+		  def last_text= "";
+		  
+		  sql.eachRow("""select text
+						   from user_source
+						  where type= upper(${type})
+							and name= ${name}
+					   order by line""")
+		  {
+			 file << it.text
+			 last_text= it.text
+		  }
+		  
+		  file << (last_text.endsWith(";") ? "\n/" : "/")
+	}
+
+	public get_dir(base,name)
+	{
+			def dir= new File(base, name)
+			if (!dir.exists()) dir.mkdir()
+			return dir;
+	}
+	
+	private extractView(name,file)
+	{
+		  log.info "extracting: "+file.absolutePath+"..."
+		  
+		  ant.truncate(file: file.absolutePath)
+		  
+		  file << "create or replace view "+sid(name)
+		  
+		  def columns= []
+		  
+		  sql.eachRow("select column_name from user_tab_columns a where table_name = ${name} order by column_id")
+		  { columns << sid(it.column_name) }
+		  
+		  file << '('+columns.join(',')+")\nas\n"
+		  
+		  sql.eachRow("""select text
+						   from user_views
+						  where view_name= ${name}""")
+		  {
+			 file << it.text
+		  }
+		  
+		  file << "\n/"
+	}
+
+	public sid(oracleIdentifier)
+	{
+		  if (oracleIdentifier==null)
+			return null
+			
+		  if (oracleIdentifier!=oracleIdentifier.toUpperCase()
+			  ||(oracleIdentifier==~'.* .*')
+			  ||(oracleIdentifier==~'^[^A-Z].*'))
+			return '"'+oracleIdentifier+'"'
+		  else
+			return oracleIdentifier.toLowerCase()
+	}
 
 }

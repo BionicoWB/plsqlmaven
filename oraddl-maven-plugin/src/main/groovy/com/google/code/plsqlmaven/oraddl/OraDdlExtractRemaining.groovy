@@ -51,7 +51,7 @@ public class OraDdlExtractRemainingMojo
    {
        if (firstExecute) 
        {
-		    def targetDir= path('target/remaining')
+		    def targetDir= path('target/remaining/schema')
             ant.mkdir(dir: targetDir)
 			connectToDatabase()
             Runtime.getRuntime().addShutdownHook(new ExtractObjectsThread(new File(targetDir),

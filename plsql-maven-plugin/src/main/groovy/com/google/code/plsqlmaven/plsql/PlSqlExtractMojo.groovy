@@ -98,10 +98,10 @@ public class PlSqlExtractMojo
 		def excludeFilter= '';
 		
         if (objects)
-            objectsFilter= " and name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
+            objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
         
         if (types)
-            typeFilter= " and type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
+            typeFilter= " and object_type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
          
         if (existing)
             existingFilter= buildExistingFilter()
@@ -109,89 +109,28 @@ public class PlSqlExtractMojo
         if (exclude)
             excludeFilter= buildExcludeFilter()
 			
-        def objectsQuery= """select distinct type 
-                               from (select type, name
-		                               from user_source 
-		                              where name not like 'SYS_PLSQL_%' 
-		                                and type not like 'JAVA%'
-		                             union all
-		                             select 'VIEW' type, view_name name
-		                               from user_views) where 1=1 """+
+  		def objectsQuery="""select object_name,
+								   object_type
+							  from user_objects
+							 where object_type in ('PROCEDURE','FUNCTION','PACKAGE','TYPE','VIEW','TRIGGER','PACKAGE BODY','TYPE BODY')
+							   and object_name not like 'SYS\\_%' escape '\\'"""+
 						  typeFilter+
 						  objectsFilter+
 						  existingFilter+
 						  excludeFilter
-               
-        log.debug objectsQuery
-            
-        sql.eachRow(objectsQuery)
-        {
-            def type= it.type.toLowerCase();
-            def ext= plsqlUtils.getTypeExt(type);
-                        
-            log.info(type+'...')
-            
-            def things_to_do_to_extract_this_type
-            
-            if ((type =~ /^package/) || (type =~ /^type/))
-            {
-               def type_dir= get_dir(project.build.sourceDirectory, type.split()[0])
-               
-               things_to_do_to_extract_this_type=
-               {
-                 if (! (it.name =~ /^SYS_PLSQL_/)) // plsql generated types from pipelined functions
-                 {
-                     def name= it.name.toLowerCase();
-                     log.info("    "+name)
-                     def odir= get_dir(type_dir, name)
-                     def target_file= new File(odir, name+".${ext}"+PLSQL_EXTENSION)
-                     extract(it.name,type,target_file)
-                 }
-               }
-            }
-			else
-			if (type=='view')
-			{
-               def type_dir= get_dir(project.build.sourceDirectory, type)
-			   
-               things_to_do_to_extract_this_type=
-               {
-                  def name= it.name.toLowerCase();
-                  log.info("    "+name)
-                  def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
-                  extractView(it.name,type,target_file)
-               }
-		    }
-            else
-            {
-               def type_dir= get_dir(project.build.sourceDirectory, type)
-       
-               things_to_do_to_extract_this_type=
-               {
-                   def name= it.name.toLowerCase();
-                   log.info("    "+name)
-                   def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
-                   extract(it.name,type,target_file)
-               }
-            }
-       
-            def typeQuery= """select name, type 
-                                from (select distinct name, type 
-		                                from user_source 
-		                               where type= ${it.type}
-		                              union
-		                              select distinct view_name name, 'VIEW' type 
-		                                from user_views 
-		                               where 'VIEW'= ${it.type})
-		                       where 1=1"""+
-							   objectsFilter+
-							   existingFilter+
-							   excludeFilter
-            log.debug typeQuery
-            sql.eachRow(typeQuery,
-                        things_to_do_to_extract_this_type)
-        }
-        
+							  
+         log.debug objectsQuery
+							
+         sql.eachRow(objectsQuery)
+		 {
+			def file= plsqlUtils.extractFile(project.build.sourceDirectory,
+							                 it.object_name,
+							                 it.object_type)
+			
+			if (file)
+				log.info "extracted ${file.absolutePath}"
+		 }
+
     }
     
     private buildExistingFilter()
@@ -204,59 +143,15 @@ public class PlSqlExtractMojo
           objects << getSourceDescriptor(file)
         
         if (objects.size()>0)
-         return ' and ('+objects.collect{ object -> "(name= '${object.name.toUpperCase()}' and type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
+         return ' and ('+objects.collect{ object -> "(object_name= '${object.name.toUpperCase()}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
         else
          return ' and 1=0'
     }
 
-    private extract(name,type,file)
-    {
-          ant.truncate(file: file.absolutePath)
-          
-          file << "create or replace "
-          
-          def last_text= "";
-          
-          sql.eachRow("""select text
-                           from user_source
-                          where type= upper(${type})
-                            and name= ${name}
-                       order by line""")
-          {
-             file << it.text
-             last_text= it.text
-          }
-          
-          file << (last_text.endsWith(";") ? "\n/" : "/")
-    }
-    
-    private extractView(name,type,file)
-    {
-          ant.truncate(file: file.absolutePath)
-          
-          file << "create or replace view "+sid(name)
-          
-		  def columns= []
-		  
-		  sql.eachRow("select column_name from user_tab_columns a where table_name = ${name} order by column_id")
-		  { columns << sid(it.column_name) }
-          
-		  file << '('+columns.join(',')+")\nas\n"
-		  
-          sql.eachRow("""select text
-                           from user_views
-                          where view_name= ${name}""")
-          {
-             file << it.text
-          }
-          
-          file << "\n/"
-    }
-	
 	private buildExcludeFilter()
 	{
 		def excludes= exclude.split(',')
 		
-        return ' and not ('+excludes.collect{ "regexp_like(name,'${it}')" }.join(' or ')+')'
+        return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
     }
 }

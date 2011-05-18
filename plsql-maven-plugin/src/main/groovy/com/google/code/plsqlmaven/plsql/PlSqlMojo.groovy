@@ -172,5 +172,10 @@ public abstract class PlSqlMojo
           else
             return oracleIdentifier.toLowerCase()
     }
-	
+
+	public String path(p)
+	{
+		return p.replace('/',File.separator)
+	}
+
 }
