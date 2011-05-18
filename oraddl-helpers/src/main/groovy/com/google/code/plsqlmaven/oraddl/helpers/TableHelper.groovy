@@ -34,7 +34,8 @@ class TableHelper extends OraDdlHelper
             return false
             
           def constraints= getConstraints(name)
-          
+		  def dbconstraints= constraints.clone()
+		  
           xml.table('name': xid(name))
           {
 			  def comment= sql.firstRow("select comments from user_tab_comments where table_name = ${name}")?.comments
@@ -62,7 +63,7 @@ class TableHelper extends OraDdlHelper
                                 'primary':       simpleKey(col.column_name,constraints, 'P'),
                                 'unique':        simpleKey(col.column_name,constraints, 'U'),
                                 'check':         simpleCheck(col.column_name,constraints),
-                                'not-null':      simpleNotNull(col.column_name,constraints),
+                                'not-null':      simpleNotNull(col.column_name,constraints,dbconstraints),
                                 'references':    simpleForeignKey(col.column_name,constraints))
 					 {
 					    if (colComment)
@@ -182,7 +183,7 @@ class TableHelper extends OraDdlHelper
       private simpleKey(columnName,constraints,type)
       {
           def constraint= constraints.find{ constraint -> (constraint.constraint_type==type
-                                   &&constraint.generated.startsWith('GENERATED')
+                                   &&constraint.constraint_name.startsWith('SYS_C')
                                    &&constraint.columns.size()==1
                                    &&constraint.columns.find{ column -> (column.column_name==columnName) }) } 
           
@@ -194,7 +195,7 @@ class TableHelper extends OraDdlHelper
       private simpleForeignKey(columnName,constraints)
       {
           def fk= constraints.find{ constraint -> (constraint.constraint_type=='R'
-                                           &&constraint.generated.startsWith('GENERATED')
+                                           &&constraint.constraint_name.startsWith('SYS_C')
                                            &&constraint.columns.size()==1
                                            &&constraint.columns.find{ column -> (column.column_name==columnName) }) }
           
@@ -213,7 +214,7 @@ class TableHelper extends OraDdlHelper
           def checks= constraints.findAll{ constraint -> (constraint.constraint_type=='C'
                                                      && constraint.columns.find{ column -> (column.column_name==columnName) }
                                                      && constraint.columns.size()==1
-                                                     && constraint.generated.startsWith('GENERATED') 
+                                                     && constraint.constraint_name.startsWith('SYS_C') 
                                                      && !isNotNullSearchCondition(constraint.search_condition,columnName)) }
           
           def r
@@ -232,15 +233,15 @@ class TableHelper extends OraDdlHelper
           return cmp(dbSearchCondition.toLowerCase().replaceAll('"',''),(columnName+' IS NOT NULL').toLowerCase())
       }
       
-      private simpleNotNull(columnName,constraints)
+      private simpleNotNull(columnName,constraints,dbconstraints)
       {
-          def colInPk= (boolean)constraints.find{ constraint -> (constraint.constraint_type=='P'
+          def colInPk= (boolean)dbconstraints.find{ constraint -> (constraint.constraint_type=='P'
                                                                  &&constraint.columns.find{ column -> (column.column_name==columnName) }) }
           
-          def constraint= constraints.findAll{ constraint -> (constraint.constraint_type=='C'
-                                                 && constraint.columns.find{ column -> (column.column_name==columnName) }
-                                                 && constraint.columns.size()==1
-                                                 && constraint.generated.startsWith('GENERATED') 
+          def constraint= constraints.findAll{ constraint -> (cmp(constraint.constraint_type,'C')
+                                                 && constraint.columns.find{ column -> cmp(column.column_name,columnName) }
+                                                 && cmp(constraint.columns.size(),1)
+                                                 && constraint.constraint_name.startsWith('SYS_C') 
                                                  && isNotNullSearchCondition(constraint.search_condition,columnName)) } 
           
           if (constraint.size()>0)
@@ -338,12 +339,16 @@ class TableHelper extends OraDdlHelper
           
 		  if (source.comment?.text()!=target.comment?.text())
 		    changes << set_table_comment(target)
-		  
+			
+		 log.debug 'source: '+source.toString()
+			
           target.columns.column.each
           {
                 targetCol ->
                 
-                def sourceCol= source.columns.column.find({ col -> col.'@name'== targetCol.'@name' })
+                def sourceCol= source.columns.column.find({ col -> cmp(col.'@name',targetCol.'@name') })
+				
+				log.debug 'sourceCol: '+sourceCol.toString()
                 
                 if (!sourceCol)
                 {
@@ -662,7 +667,7 @@ class TableHelper extends OraDdlHelper
                                            from user_constraints
                                           where constraint_name in (${positionQuery})
                                             and constraint_type= 'U'
-                                            and generated= 'GENERATED NAME';
+                                            and constraint_name like 'SYS\\_C%' escape '\\';
                                          
                                          execute immediate 'alter table "'||v_table||'" drop constraint "'||v_constraint||'" cascade';
                                        
@@ -694,7 +699,7 @@ class TableHelper extends OraDdlHelper
                                                                                        where column_name in (${columnNames})
                                                                                          and position is null
                                                                                          and table_name= v_table) 
-                                                              and generated= 'GENERATED NAME'
+                                                              and constraint_name like 'SYS\\_C%' escape '\\'
                                                               and constraint_type= 'C')
                                              loop
                                               if c_cur.search_condition= v_search_condition then
@@ -734,7 +739,7 @@ class TableHelper extends OraDdlHelper
                                            from user_constraints
                                           where constraint_name in (${positionQuery})
                                             and constraint_type= 'R'
-                                            and generated= 'GENERATED NAME'
+                                            and constraint_name like 'SYS\\_C%' escape '\\'
                                             and r_constraint_name = (select constraint_name
                                                                        from all_constraints
                                                                       where constraint_name in (select constraint_name
