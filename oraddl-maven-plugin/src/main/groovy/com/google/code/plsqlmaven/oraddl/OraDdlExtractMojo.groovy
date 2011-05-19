@@ -149,8 +149,16 @@ public class OraDdlExtractMojo
            def path= file.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
            def type= path[path.length-2]
            def name= path[path.length-1].split('\\.')[0]
-		   def xml= parser.parse(file)
-           objects << ['name': xml.'@name', 'type': type]
+		   
+		   try
+		   {
+   		      def xml= parser.parse(file)
+              objects << ['name': xml.'@name', 'type': type]
+		   }
+		   catch (Exception ex)
+		   {
+			   objects << ['name': name, 'type': type]
+		   }
        }
        
        if (objects.size()>0)
