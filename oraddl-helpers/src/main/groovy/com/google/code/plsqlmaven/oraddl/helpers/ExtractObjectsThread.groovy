@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven.plsql
+package com.google.code.plsqlmaven.oraddl.helpers
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -18,9 +18,9 @@ package com.google.code.plsqlmaven.plsql
 
 class ExtractObjectsThread extends Thread
 {
-	   def targetDir,log,sql,objects,types,exclude,plsqlUtils
+	   def targetDir,log,sql,objects,types,exclude,schemaUtils
 	   
-	   public ExtractObjectsThread(targetDir,log,sql,objects,types,exclude,plsqlUtils)
+	   public ExtractObjectsThread(targetDir,log,sql,objects,types,exclude,schemaUtils)
 	   {
 		   this.targetDir= targetDir
 		   this.log= log
@@ -28,7 +28,7 @@ class ExtractObjectsThread extends Thread
 		   this.objects= objects
 		   this.types= types
 		   this.exclude= exclude
-		   this.plsqlUtils= plsqlUtils
+		   this.schemaUtils= schemaUtils
 	   }
 	   
 	   public void run()
@@ -40,17 +40,17 @@ class ExtractObjectsThread extends Thread
 		   def typeFilter= ''
 		   def excludeFilter= ''
 		   
-		   if (types)
-			 typeFilter= " and object_type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
+           if (types)
+             typeFilter= " and object_type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
 			 
-		   if (exclude)
-			 excludeFilter= buildExcludeFilter()
+           if (exclude)
+             excludeFilter= buildExcludeFilter()
 
 		   def objectsQuery="""select object_name,
-									   object_type
+			 						  object_type
 								 from user_objects
-								where object_type in ('PROCEDURE','FUNCTION','PACKAGE','TYPE','VIEW','TRIGGER','PACKAGE BODY','TYPE BODY')
-								   and object_name not like 'SYS\\_%' escape '\\'"""+
+							    where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW')
+							 	  and object_name not like 'SYS\\_%' escape '\\'"""+
 						   typeFilter+
 						   buildObjectsFilter()+
 						   excludeFilter
@@ -59,13 +59,15 @@ class ExtractObjectsThread extends Thread
 		   
 		   sql.eachRow(objectsQuery)
 		   {
-			   def file= plsqlUtils.extractFile(targetDir.absolutePath,
-												 it.object_name,
-												it.object_type)
+			   def file= schemaUtils.extractFile(targetDir.absolutePath,
+												 it.object_type,
+												it.object_name)
 			   
 			   if (file)
 				 log.info "extracted ${file.absolutePath}"
 		   }
+		
+
 	   }
 	   
 	   private buildExcludeFilter()
@@ -78,11 +80,13 @@ class ExtractObjectsThread extends Thread
 	   
 	   private String buildObjectsFilter()
 	   {
+		   def helper= schemaUtils.getHelper('table')
+		   
 		   if (objects.size()>0)
-   		     return ' and ('+objects.collect{ object -> "not (object_name= '${object.name.toUpperCase()}' and object_type= '${object.type.toUpperCase()}')" }.join(' and ')+')'
+		     return ' and ('+objects.collect{ object -> "not (object_name= '${helper.oid(object.name,false)}' and object_type= '${object.type.toUpperCase()}')" }.join(' and ')+')'
 		   else
-			 return ' and 1=1'
-   
+		     return ' and 1=1'
+		   
 	   }
 	
 	
