@@ -17,6 +17,7 @@ package com.google.code.plsqlmaven.plsql
  */
 
 import groovy.xml.MarkupBuilder
+import java.sql.SQLSyntaxErrorException
 
 /**
  * Compile PL/SQL sources.
@@ -162,30 +163,36 @@ public class PlSqlCompileMojo
         {
              sd ->
              
-             sd['errors']= [];
-             
-             sql.eachRow("""select a.line, 
-                                   a.position,
-                                   a.text,
-                                   lower(decode(a.attribute,'WARNING','WARN',a.attribute)) type,
-                                   a.message_number,
-                                   nvl(b.text,c.text) source_text
-                              from user_errors a,
-                                   user_source b,
-                                   user_source c
-                             where c.line(+)= a.line-1
-                               and c.name(+)= a.name
-                               and c.type(+)= a.type
-                               and b.line(+)= a.line
-                               and b.name(+)= a.name
-                               and b.type(+)= a.type
-                               and a.name= ${sd.name}
-                               and a.type= ${sd.type}
-                          order by a.sequence""")
-             { 
-                 sd.errors << it.toRowResult() 
-             }
-             
+             if (sd['errors']) 
+				 success= false
+			 else
+			 {
+			     sd['errors']= []
+			 
+	             sql.eachRow("""select a.line, 
+	                                   a.position,
+	                                   a.text,
+	                                   lower(decode(a.attribute,'WARNING','WARN',a.attribute)) type,
+	                                   a.message_number,
+	                                   nvl(b.text,c.text) source_text
+	                              from user_errors a,
+	                                   user_source b,
+	                                   user_source c
+	                             where c.line(+)= a.line-1
+	                               and c.name(+)= a.name
+	                               and c.type(+)= a.type
+	                               and b.line(+)= a.line
+	                               and b.name(+)= a.name
+	                               and b.type(+)= a.type
+	                               and a.name= ${sd.name}
+	                               and a.type= ${sd.type}
+	                          order by a.sequence""")
+	             { 
+	                 sd.errors << it.toRowResult() 
+	             }
+				 
+			 }
+			 
              if ( sd.errors.size() > 0 )
              {
                  
@@ -193,7 +200,7 @@ public class PlSqlCompileMojo
                 
                 for (error in sd.errors)
                 {
-                  this.logError(error);
+                  this.logError(error)
                   
                   if (error.type=='error') 
                     success=false
@@ -223,6 +230,7 @@ public class PlSqlCompileMojo
                      sd.errors.each()
                      {
                          error ->
+						 
                          xml."${error.type}"( line: error.line, position: error.position, code: error.message_number)
                          {
                              xml.text('')
@@ -259,7 +267,25 @@ public class PlSqlCompileMojo
     {
         ant.mkdir(dir: project.build.directory)
         
-        ant.touch(file: touchFile.getAbsolutePath())
+        ant.touch(file: touchFile.absolutePath)
+		
+		def wait= true
+		
+		sources.each
+		{
+			source ->
+			
+			if (source.touchme)
+			{
+			  if (wait)
+			  {
+				   Thread.currentThread().sleep(1000)
+				   wait= false
+			  }
+			  
+			  ant.touch(file: source.file.absolutePath)
+			}
+	    }
     }
 
     public void compileChangedFiles()
@@ -270,7 +296,17 @@ public class PlSqlCompileMojo
            {
                log.info("compiling: "+it.file.getAbsolutePath()+"...")
                
-               compile(it.file)
+			   try
+			   {
+                   compile(it.file)
+			   }
+			   catch (SQLSyntaxErrorException ssex)
+			   {
+				   it['touchme']= true;
+				   it['errors']= []
+				   it.errors << [ line: 1, position: 1, message_number: ssex.errorCode, 
+					              text: 'syntax error: '+ssex.message, type: 'error']
+			   }
            }
         }
         

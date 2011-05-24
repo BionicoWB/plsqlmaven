@@ -134,6 +134,8 @@ public class PlSqlUtils
 		catch (SQLException ex)
 		{
 			// ignore compile errors (we will read user_errors) 
+			if (ex.errorCode!=24344)
+			  throw ex
 	    }
     }
     
@@ -145,12 +147,14 @@ public class PlSqlUtils
         for (file in files)
         {
                sources << getSourceDescriptor(file)
+			   log.info 'compiling: '+file.absolutePath+'...'
                compile(file)
         }
         
         sources.each()
         {
                def ddl= "alter ${it.baseType} ${it.name} compile";
+			   log.info "re-compiling: ${it.baseType} ${it.name}..."
                sql.execute(ddl.toString())
         }
     }

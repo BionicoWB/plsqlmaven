@@ -39,18 +39,30 @@ public class PlSqlPackageMojo
         
         if (project.getPackaging()=='war')
         {
-          plsqlOutputDirectory= project.build.directory+"/${project.build.finalName}/WEB-INF/plsql".replace('/', File.separator)
+          plsqlOutputDirectory= project.build.directory+path("/${project.build.finalName}/WEB-INF/plsql")
           def configDir= plsqlOutputDirectory.replaceFirst('plsql$','entity-config'+File.separator+'plsqlgateway')
           ant.mkdir(dir: configDir)
-          def general= new File(configDir,'general.xml')
-          ant.truncate(file: general.absolutePath)
-          general << this.getClass().getClassLoader().getResourceAsStream('com/google/code/plsqlmaven/webapp/general.xml')
-          def embedded= new File(configDir,'embedded.xml')
-          ant.truncate(file: embedded.absolutePath)
-          embedded << getTemplate('com/google/code/plsqlmaven/webapp/general.xml',['defaultPage': defaultPage])
-          def web= new File(plsqlOutputDirectory.replaceFirst('plsql$','web.xml'))
-          ant.truncate(file: web.absolutePath)
-          web << getTemplate('com/google/code/plsqlmaven/webapp/web.xml',['project': project])
+		  
+		  if (!new File(project.basedir.absolutePath+path('/src/main/webapp/WEB-INF/entity-config/plsqlgateway/general.xml')).exists())
+		  {
+	          def general= new File(configDir,'general.xml')
+	          ant.truncate(file: general.absolutePath)
+	          general << this.getClass().getClassLoader().getResourceAsStream('com/google/code/plsqlmaven/webapp/general.xml')
+		  }
+		  
+		  if (!new File(project.basedir.absolutePath+path('/src/main/webapp/WEB-INF/entity-config/plsqlgateway/embedded.xml')).exists())
+		  {
+	          def embedded= new File(configDir,'embedded.xml')
+	          ant.truncate(file: embedded.absolutePath)
+	          embedded << getTemplate('com/google/code/plsqlmaven/webapp/embedded.xml',['defaultPage': defaultPage])
+		  }
+		  
+		  if (!new File(project.basedir.absolutePath+path('/src/main/webapp/WEB-INF/web.xml')).exists())
+		  {
+	          def web= new File(plsqlOutputDirectory.replaceFirst('plsql$','web.xml'))
+	          ant.truncate(file: web.absolutePath)
+	          web << getTemplate('com/google/code/plsqlmaven/webapp/web.xml',['project': project])
+		  }
         }
         
         ant.mkdir(dir: plsqlOutputDirectory)

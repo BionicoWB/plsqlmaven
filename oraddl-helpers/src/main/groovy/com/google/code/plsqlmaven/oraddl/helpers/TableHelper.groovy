@@ -535,7 +535,7 @@ class TableHelper extends OraDdlHelper
       {
            return [
                             type: 'drop_trigger',
-                             ddl: "alter table ${oid(table.'@name')} drop trigger ${oid(trigger.'@name')}",
+                             ddl: "drop trigger ${oid(trigger.'@name')}",
                      privMessage: "You need to: grant alter table to ${username}"
                   ]
       }

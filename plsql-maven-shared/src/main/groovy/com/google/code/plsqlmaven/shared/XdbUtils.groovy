@@ -40,20 +40,22 @@ public class XdbUtils
     public void importDirectory(dir)
     {
         if (!new File(dir).exists())
-        return;
+          return;
 
-      def cnt= 0;
+        def cnt= 0;
+		def adir= new File(dir).absolutePath.replace(File.separator+'.'+File.separator,File.separator)
       
-      def scanner=  ant.fileScanner
-      {
+        def scanner=  ant.fileScanner
+        {
           fileset(dir: dir)
-      }
+        }
 
-      for (file in scanner)
-      {
-         def filePath= file.absolutePath.replace(dir,'')
-         createResource(filePath,new FileInputStream(file))
-      }
+        for (file in scanner)
+        {
+          def filePath= file.absolutePath.replace(File.separator+'.'+File.separator,File.separator).replace(adir,'')
+		  log.info "importing resource: ${filePath} from: ${adir}"
+          createResource(filePath,new FileInputStream(file))
+        }
 
     }
     

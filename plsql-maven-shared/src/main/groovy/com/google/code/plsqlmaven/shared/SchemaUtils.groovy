@@ -195,7 +195,10 @@ public class SchemaUtils
 		  return false
 		}
 		else
+		{
+		  writer.close()
 		  return file
+		}
     }
 	
     public getHelper(type)

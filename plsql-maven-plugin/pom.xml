@@ -63,6 +63,13 @@
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>
+    <dependency>
+    	<groupId>com.google.code.plsqlmaven</groupId>
+    	<artifactId>plsql-webapp-deployer</artifactId>
+    	<version>${project.version}</version>
+    	<type>jar</type>
+    	<scope>runtime</scope>
+    </dependency>
   </dependencies>
 	<build>
         <sourceDirectory>src/main/groovy</sourceDirectory>
