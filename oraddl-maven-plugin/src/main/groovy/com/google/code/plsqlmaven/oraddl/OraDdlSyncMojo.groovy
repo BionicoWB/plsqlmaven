@@ -69,6 +69,9 @@ public class OraDdlSyncMojo
    
    private syncObjects()
    {
+	   if (!new File(sourceDirectory).exists())
+	   return;
+
        def scanner=  ant.fileScanner
        {
            fileset(dir: sourceDirectory)

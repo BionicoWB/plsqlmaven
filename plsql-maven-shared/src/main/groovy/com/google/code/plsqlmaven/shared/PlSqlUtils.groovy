@@ -122,6 +122,7 @@ public class PlSqlUtils
     public compile(File source)
     {
         def ddl= source.getText().replace('\r','')
+		log.debug ddl
 		def sp= ddl.lastIndexOf("/")
 		
 		if (sp>0)

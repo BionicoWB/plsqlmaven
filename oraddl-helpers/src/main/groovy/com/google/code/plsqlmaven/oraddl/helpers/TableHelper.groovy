@@ -58,7 +58,7 @@ class TableHelper extends OraDdlHelper
                                 'type':          col.data_type.toLowerCase().substring(0,(p==-1?col.data_type.length():p)),
                                 'precision':     col.data_precision,
                                 'scale':         col.data_scale,
-                                'length':        rd(col.char_length,0),
+                                'length':        rd(col.char_length+(col.char_used==null ? 0 : ' '+(col.char_used=='B' ? 'byte' : 'char')),0),
                                 'default':       (col.data_default?.trim()?.toLowerCase()=='null' ? null : col.data_default?.trim()),
                                 'primary':       simpleKey(col.column_name,constraints, 'P'),
                                 'unique':        simpleKey(col.column_name,constraints, 'U'),
@@ -310,7 +310,7 @@ class TableHelper extends OraDdlHelper
                 changes << add_constraint(table,col_to_primary(column))
 
               if (column.'@not-null'=='true')
-                changes << add_constraint(table,col_to_check(column,column.'@name'+' is not null'))
+                changes << add_constraint(table,col_to_notnull(column))
 
               if (column.'@unique'=='true')
                 changes << add_constraint(table,col_to_unique(column))
@@ -361,7 +361,7 @@ class TableHelper extends OraDdlHelper
 	                    changes << add_constraint(target,col_to_primary(targetCol))
 	    
 	                  if (targetCol.'@not-null'=='true')
-	                    changes << add_constraint(target,col_to_check(targetCol,targetCol.'@name'+' is not null'))
+	                    changes << add_constraint(target,col_to_notnull(targetCol))
 	    
 	                  if (targetCol.'@unique'=='true')
 	                    changes << add_constraint(target,col_to_unique(targetCol))
@@ -391,12 +391,12 @@ class TableHelper extends OraDdlHelper
                     if (!cmp(sourceCol,targetCol,'unique','false'))
                       modify_simple_unique(changes,target,targetCol,sourceCol)
 
+                    if (!cmp(sourceCol,targetCol,'not-null','false'))
+                      modify_simple_notnull(changes,target,targetCol,sourceCol)
+					  
                     if (!cmp(sourceCol,targetCol,'check'))
                       modify_simple_check(changes,target,targetCol,sourceCol)
                       
-                    if (!cmp(sourceCol,targetCol,'not-null','false'))
-                      modify_simple_notnull(changes,target,targetCol,sourceCol)
-
                     if (!cmp(sourceCol,targetCol,'references'))
                       modify_simple_foreign(changes,target,targetCol,sourceCol)
                 }
@@ -573,7 +573,7 @@ class TableHelper extends OraDdlHelper
           else
           {
              def columnType= getColumnType(targetCol)
-             
+			 
              changes+= [
                                  type: 'modify_column',
                                   ddl: "alter table ${oid(table.'@name')} modify (${oid(targetCol.'@name')} ${columnType})",
@@ -598,28 +598,34 @@ class TableHelper extends OraDdlHelper
       
       public add_constraint(table,constraint)
       {
-          def ddl= "alter table ${oid(table.'@name')} add "+(constraint.'@name' ? "constraint ${oid(constraint.'@name')}\n" : '');
-          
-          if (constraint.'@type'=='primary')
-              ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"
+		  def ddl= "alter table ${oid(table.'@name')} "
+		  
+		  if (constraint.'@type'=='not-null')
+              ddl+= "modify (${constraint.columns.column[0].'@name'} not null)"
           else
-          if (constraint.'@type'=='foreign')
-          {
-              ddl+="foreign key ("+constraint.columns.column*.'@name'.join(',')+")\n"
-              def owner= constraint.references[0].'@owner'
-              ddl+="references "+( owner&&owner!=username ? owner+'.' : '' )+constraint.references[0].'@table'
-              ddl+='('+constraint.references.column*.'@name'.join(',')+')'
-              
-              if (dv(constraint.'@on-delete','no action')!='no action')
-                ddl+='\non delete '+constraint.'@on-delete'
-          }
-          else
-          if (constraint.'@type'=='check')
-              ddl+="check ("+constraint.'@expression'+")"
-          else
-          if (constraint.'@type'=='unique')
-              ddl+="unique ("+constraint.columns.column*.'@name'.join(',')+")"
-
+		  {
+			  ddl+= "add "+(constraint.'@name' ? "constraint ${oid(constraint.'@name')}\n" : '')
+			  
+	          if (constraint.'@type'=='primary')
+	              ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"
+	          else
+	          if (constraint.'@type'=='foreign')
+	          {
+	              ddl+="foreign key ("+constraint.columns.column*.'@name'.join(',')+")\n"
+	              def owner= constraint.references[0].'@owner'
+	              ddl+="references "+( owner&&owner!=username ? owner+'.' : '' )+constraint.references[0].'@table'
+	              ddl+='('+constraint.references.column*.'@name'.join(',')+')'
+	              
+	              if (dv(constraint.'@on-delete','no action')!='no action')
+	                ddl+='\non delete '+constraint.'@on-delete'
+	          }
+	          else
+	          if (constraint.'@type'=='check')
+	              ddl+="check ("+constraint.'@expression'+")"
+	          else
+	          if (constraint.'@type'=='unique')
+	              ddl+="unique ("+constraint.columns.column*.'@name'.join(',')+")"
+		  }
           
           return [
                          type: 'add_constraint',
@@ -790,6 +796,11 @@ class TableHelper extends OraDdlHelper
 		  return parser.parseText('<constraint type="check" expression="'+expression+'"><columns><column name="'+column.'@name'+'"/></columns></constraint>')
 	  }
 
+	  public col_to_notnull(column)
+	  {
+		  return parser.parseText('<constraint type="not-null"><columns><column name="'+column.'@name'+'"/></columns></constraint>')
+	  }
+	  
 	  public col_to_foreign(column)
 	  {
 		  def ref= column.'@references'.split('\\.')
@@ -851,7 +862,7 @@ class TableHelper extends OraDdlHelper
             changes << drop_constraint(table,col_to_check(sourceCol,sourceCol.'@name'+' is not null'))
             
           if (targetCol.'@not-null'=='true')
-            changes << add_constraint(table,col_to_check(targetCol,targetCol.'@name'+' is not null'))
+            changes << add_constraint(table,col_to_notnull(targetCol))
       }
 
       public modify_simple_foreign(changes,table,targetCol,sourceCol)

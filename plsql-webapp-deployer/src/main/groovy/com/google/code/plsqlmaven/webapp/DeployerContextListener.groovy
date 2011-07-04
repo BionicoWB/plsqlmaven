@@ -16,7 +16,7 @@ package com.google.code.plsqlmaven.webapp
  * limitations under the License.
  */
 
-import java.util.logging.Logger;
+import org.apache.log4j.Logger;
 
 import javax.servlet.ServletContextListener
 import javax.servlet.ServletContextEvent
@@ -39,7 +39,7 @@ import javax.naming.InitialContext
  */
 class DeployerContextListener implements ServletContextListener
 {
-    private Logger log= Logger.getLogger(DeployerContextListener.class.getName())
+    private Logger log= Logger.getLogger(DeployerContextListener.class)
     
     public void contextInitialized(ServletContextEvent event)
     {
