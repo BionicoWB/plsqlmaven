@@ -638,9 +638,30 @@ class TableHelper extends OraDdlHelper
    
       public rename_constraint(table,sourceCons,targetCons)
       {
+		  def position=1;		  
+		  def positionQuery= targetCons.columns.column.collect{ """select constraint_name from user_cons_columns where column_name= '${oid(it.'@name',false)}' and position= ${position++} and table_name= v_table""" }.join(' intersect ')
+		  
           return [
                               type: 'rename_constraint',
-                               ddl: "alter table ${oid(table.'@name')} rename constraint ${oid(sourceCons.'@name')} to ${oid(targetCons.'@name')}",
+                             //  ddl: "alter table ${oid(table.'@name')} rename constraint ${oid(sourceCons.'@name')} to ${oid(targetCons.'@name')}",
+							   ddl: """-- rename ${targetCons.'@type'} constraint on ${oid(table.'@name')}(${targetCons.columns.column.collect{ oid(it.'@name') }.join(',')}) to ${targetCons.'@name'}  
+                                       declare
+                                         v_table       varchar2(30):= '${oid(table.'@name',false)}';
+                                         v_constraint  varchar2(30):= '${oid(sourceCons.'@name',false)}';
+                                       begin
+                                         
+                                         if v_constraint== 'null' then
+	                                         select constraint_name
+	                                           into v_constraint
+	                                           from user_constraints
+	                                          where constraint_name in (${positionQuery})
+	                                            and constraint_type= 'P'
+	                                            and constraint_name like 'SYS\\_C%' escape '\\';
+                                         end if;
+                                         
+                                         execute immediate 'alter table "'||v_table||'" rename constraint "'||v_constraint||'" to ${oid(targetCons.'@name')}';
+                                       
+                                       end;""",
                        privMessage: "You need to: grant alter table to ${username}"
                  ]
       }
