@@ -37,6 +37,12 @@ public class PlSqlCompileMojo
     */
    private String plsqlSource;
 
+   /**
+   * Whether to loop waiting for changes, expressend in seconds between loops
+   * @since 1.9
+   * @parameter expression="${loop}"
+   */
+	private int loop;
 
     /**
      * Location of the touch file.
@@ -77,14 +83,29 @@ public class PlSqlCompileMojo
               return
             }
             
-            compileChangedFiles();
-            
-            success= reportCompileErrors();
-                
+			def compileThings= 
+			{
+			
+	            compileChangedFiles();
+	            
+	            success= reportCompileErrors();
+	                
+	            touchReferenceFile();
+			
+			}
+			
+			if (loop)
+			  while (true) 
+			  {
+				  compileThings()
+				  Thread.currentThread().sleep(loop*1000)
+		      }
+			else
+			  compileThings()
+			
+			
             disconnectFromDatabase();
-            
-            touchReferenceFile();
-            
+			
             if (!success)
              fail('PL/SQL errors found.')
     }
@@ -104,26 +125,43 @@ public class PlSqlCompileMojo
                   return
                 }
             
-                
-                compileChangedFiles();
-                
-                success= reportCompileErrors();
-                
-                buildXmlReport(); // create an xml report for UI integration
-                
+                def compileThings= 
+				{
+					getLastCompileTime();
+					
+					determineChangedFiles();
+					
+	                compileChangedFiles();
+	                
+	                success= reportCompileErrors();
+	                
+					touchReferenceFile();
+				}
+				
+				if (loop)
+					while (true)
+					{
+						compileThings()
+						Thread.currentThread().sleep(loop*1000)
+					}
+	    			    else
+					    compileThings()
+						
+				buildXmlReport(); // create an xml report for UI integration
+						
                 disconnectFromDatabase();
+				
             }
 			else
 			   success= true
                 
-            touchReferenceFile();
-            
             if (!success)
              fail('PL/SQL errors found.')
     }
     
     private boolean determineChangedFiles()
     {
+		sources= [];
         def files= getPlsqlSourceFiles()
         def cnt= 0;
         
@@ -290,10 +328,14 @@ public class PlSqlCompileMojo
 
     public void compileChangedFiles()
     {
+		def changed= false;
+		
         sources.each() 
         {
            if (it.changed)
            {
+			   changed= true;
+			   
                log.info("compiling: "+it.file.getAbsolutePath()+"...")
                
 			   try
@@ -310,24 +352,27 @@ public class PlSqlCompileMojo
            }
         }
         
-		def recompiled= [:]
-        sources.each()
-        {
-		   if (!recompiled[it.baseType+'|'+it.name])
-		   {
-             def ddl= """begin
-                          execute immediate 'alter ${it.baseType} ${it.name} compile';
-                         exception
-                           when others then
-                             null;
-                         end;""";
-						 
-             log.info("re-compiling: ${it.baseType} ${it.name.toLowerCase()}...")
-		   
-             sql.execute(ddl.toString()) 
-			 recompiled[it.baseType+'|'+it.name]= true;
-		   }
-        }
+		if (changed)
+		{
+			def recompiled= [:]
+	        sources.each()
+	        {
+			   if (!recompiled[it.baseType+'|'+it.name])
+			   {
+	             def ddl= """begin
+	                          execute immediate 'alter ${it.baseType} ${it.name} compile';
+	                         exception
+	                           when others then
+	                             null;
+	                         end;""";
+							 
+	             log.info("re-compiling: ${it.baseType} ${it.name.toLowerCase()}...")
+			   
+	             sql.execute(ddl.toString()) 
+				 recompiled[it.baseType+'|'+it.name]= true;
+			   }
+	        }
+		}
     }
 
 }
