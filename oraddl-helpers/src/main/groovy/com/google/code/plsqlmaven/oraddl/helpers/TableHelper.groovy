@@ -650,7 +650,7 @@ class TableHelper extends OraDdlHelper
                                          v_constraint  varchar2(30):= '${oid(sourceCons.'@name',false)}';
                                        begin
                                          
-                                         if v_constraint== 'null' then
+                                         if v_constraint= 'null' then
 	                                         select constraint_name
 	                                           into v_constraint
 	                                           from user_constraints
@@ -749,15 +749,15 @@ class TableHelper extends OraDdlHelper
 		  
           return [
                               type: 'drop_constraint',
-                               ddl: """-- drop foreign constraint on ${oid(table.'@name')}(${constraint.columns.column.collect{ oid(it.'@name') }.join(',')}) to ${oid(constraint.references[0].'@table')}(${constraint.references.column.collect{ oid(it.'@name') }.join(',')}) 
+                               ddl: """-- drop foreign constraint on ${oid(table.'@name')}(${constraint.columns.column.collect{ oid(it.'@name') }.join(',')}) to ${oid(constraint.references.'@table'[0])}(${constraint.references.column.collect{ oid(it.'@name') }.join(',')}) 
                                        declare
                                          v_table       varchar2(30):= '${oid(table.'@name',false)}';
-                                         v_r_table     varchar2(30):= '${oid(constraint.references[0].'@table',false)}';
-                                         v_r_owner     varchar2(30):= '${oid(constraint.references[0].'@owner',false)}';
+                                         v_r_table     varchar2(30):= '${oid(constraint.references.'@table'[0],false)}';
+                                         v_r_owner     varchar2(30):= '${oid(constraint.references.'@owner'[0],false)}';
                                          v_constraint  varchar2(30);
                                        begin
                                        
-                                         if v_r_owner is null then
+                                         if v_r_owner = 'null' then
                                            v_r_owner:= user;
                                          end if;
                                          
@@ -771,7 +771,7 @@ class TableHelper extends OraDdlHelper
                                                                        from all_constraints
                                                                       where constraint_name in (select constraint_name
 										                                                         from all_cons_columns a
-										                                                        where (${rPositionQuery})
+										                                                        where constraint_name in (${rPositionQuery})
 										                                                          and owner = v_r_owner)
 										                               and constraint_type in ('P','U')
 										                               and owner = v_r_owner);

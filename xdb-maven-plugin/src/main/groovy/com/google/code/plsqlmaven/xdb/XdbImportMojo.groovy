@@ -37,7 +37,7 @@ public class XdbImportMojo
     
   /**
    * Whether to loop waiting for changes, expressend in seconds between loops
-   * @since 1.0
+   * @since 1.9
    * @parameter expression="${loop}"
    */
     private int loop;

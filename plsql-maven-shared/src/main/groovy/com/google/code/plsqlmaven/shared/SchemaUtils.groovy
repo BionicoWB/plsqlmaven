@@ -111,7 +111,7 @@ public class SchemaUtils
                try
                {
                        log.info "sync ${type} ${object.name}"
-                       def target= parser.parse(object.file)
+                       def target= parser.parseText(object.file.getText().replace('\r',''))
                        
                        if (!helper.exists(target))
                           changes+= ensureList(helper.create(target))
@@ -151,7 +151,7 @@ public class SchemaUtils
            {
                if (!change.failSafe)
                {
-                   log.error ex.message
+                   log.error ex.message+' executing: '+change.ddl.toString()
                    success= false
                }
            }
