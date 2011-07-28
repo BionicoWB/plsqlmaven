@@ -456,14 +456,14 @@ class TableHelper extends OraDdlHelper
           target.constraints.constraint.each
           {
                  targetCons ->
+				 
+                 def sourceCons= source.constraints.constraint.find{ c-> (c.'@name'==targetCons.'@name') }
 
-                 def sourceCons= source.constraints.constraint.find{ c-> (c.'@name'==targetCons.'@name')}
-                 
-                 if (!sourceCons)
+				 if (!sourceCons)
                  {
-                     if (!targetCons.'@name' in renamedConstraints)
+                     if (!(targetCons.'@name' in renamedConstraints))
                        changes << add_constraint(target,targetCons)
-                 }
+				 }
                  else
                  {
                      try
@@ -472,7 +472,7 @@ class TableHelper extends OraDdlHelper
                             ||!cmp(sourceCons,targetCons,'on-delete','no action')
                             ||!cmp(sourceCons,targetCons,'expression')
                             ||!cmp(sourceCons.references[0]?.'@owner',targetCons.references[0]?.'@owner')
-                            ||!cmp(sourceCons.references[0]?.'@table',targetCons.references[0]?.'@table'))
+                            ||!cmp(sourceCons.references[0]?.'@table',targetCons.references[0]?.'@table') )
                             throw new ContextException('base metadata differs')
                         else
                         if (targetCons.'@type'!='check')
@@ -753,7 +753,7 @@ class TableHelper extends OraDdlHelper
                                        declare
                                          v_table       varchar2(30):= '${oid(table.'@name',false)}';
                                          v_r_table     varchar2(30):= '${oid(constraint.references.'@table'[0],false)}';
-                                         v_r_owner     varchar2(30):= '${oid(constraint.references.'@owner'[0],false)}';
+                                         v_r_owner     varchar2(30):= nvl('${oid(constraint.references.'@owner'[0],false)}','null');
                                          v_constraint  varchar2(30);
                                        begin
                                        
@@ -847,7 +847,7 @@ class TableHelper extends OraDdlHelper
 		      rcolumn= column.'@name'
 		  }
 		  
-		  return parser.parseText('<constraint type="foreign"><columns><column name="'+column.'@name'+'"/></columns><refercences table="'+rtable+'" owner="'+rowner+'"><column name="'+rcolumn+'"/></refercences></constraint>')
+		  return parser.parseText('<constraint type="foreign"><columns><column name="'+column.'@name'+'"/></columns><references table="'+rtable+'" owner="'+rowner+'"><column name="'+rcolumn+'"/></references></constraint>')
 	  }
 	  
 	  public modify_simple_primary(changes,table,targetCol,sourceCol)
@@ -917,7 +917,7 @@ class TableHelper extends OraDdlHelper
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
-          def target_length= column.'@length';
+          def target_length= column.'@length'.split(' ')[0];
 
           changes << [
                               type: 'maven_translate_values_clob_to_varchar2',
@@ -997,7 +997,7 @@ class TableHelper extends OraDdlHelper
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
-          def target_length= column.'@length';
+          def target_length= column.'@length'.split(' ')[0];
 
           changes << [
                               type: 'maven_translate_values_number_to_varchar2',
