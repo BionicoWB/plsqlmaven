@@ -44,20 +44,24 @@ public class XdbPackageMojo
             ant.fileset(dir: xdbSourceDirectory)
         }
         
-        def scanner=  ant.fileScanner
-        {
-            fileset(dir: xdbOutputDirectory)
-            {
-                for (ext in translateEntitiesExtensions)
-                  include(name: "**/*"+ext)
-            }
-        }
-        
-        for (file in scanner)
-        {
-            def text= removeHtmlEntities(file.getText('UTF-8'))
-            ant.truncate(file: file.absolutePath)
-            file << text
-        }
+		if (translateEntitiesExtensions.length > 0)
+		{
+	        def scanner=  ant.fileScanner
+	        {
+	            fileset(dir: xdbOutputDirectory)
+	            {
+	                for (ext in translateEntitiesExtensions)
+	                  include(name: "**/*"+ext)
+	            }
+	        }
+	        
+	        for (file in scanner)
+	        {
+	            def text= removeHtmlEntities(file.getText('UTF-8'))
+	            ant.truncate(file: file.absolutePath)
+	            file << text
+	        }
+		}
+		
     }
 }
