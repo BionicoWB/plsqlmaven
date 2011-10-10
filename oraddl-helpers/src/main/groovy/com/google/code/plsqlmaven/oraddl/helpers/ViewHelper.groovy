@@ -76,7 +76,7 @@ class ViewHelper extends OraDdlHelper
       public drop(view)
       {
           return [
-                          type: 'create_view',
+                          type: 'drop_view',
                            ddl: "drop view ${oid(view.'@name')}",
                    privMessage: "You need to: grant drop view to ${username}"
                  ];

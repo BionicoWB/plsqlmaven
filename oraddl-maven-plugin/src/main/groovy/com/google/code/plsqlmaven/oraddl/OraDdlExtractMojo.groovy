@@ -110,8 +110,9 @@ public class OraDdlExtractMojo
 		 
        def objectsQuery="""select object_name, 
                                   object_type
-                             from user_objects
-                            where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW') 
+                             from user_objects a
+                            where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW','MATERIALIZED VIEW') 
+                              and not (object_type = 'TABLE' and exists(select 1 from user_snapshots where table_name= a.object_name and prebuilt= 'NO'))
                               and object_name not like 'SYS\\_%' escape '\\'"""+
 						typeFilter+
 					    objectsFilter+

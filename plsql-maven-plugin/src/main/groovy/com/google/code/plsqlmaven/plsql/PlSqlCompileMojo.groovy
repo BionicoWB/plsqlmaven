@@ -71,7 +71,6 @@ public class PlSqlCompileMojo
     {
             def success= false;
             
-            getLastCompileTime();
             
             def sd= getSourceDescriptor(new File(plsqlSource))
             sd['changed']= true
@@ -85,6 +84,7 @@ public class PlSqlCompileMojo
             
 			def compileThings= 
 			{
+                    getLastCompileTime();
 			
 	            compileChangedFiles();
 	            

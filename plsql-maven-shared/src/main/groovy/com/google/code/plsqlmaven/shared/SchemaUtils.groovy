@@ -79,11 +79,13 @@ public class SchemaUtils
        for (file in scanner)
        {
            def path= file.absolutePath.split(File.separator)
-           def type= path[path.length-2]
+           def type= path[path.length-2].replaceAll('_',' ')
            def name= path[path.length-1].split('\\.')[0]
            if (!objects[type]) objects[type]= []
            objects[type] << ['file': file, 'name': name]
        }
+
+       logger.debug '------------------->'+objects
        
        sync(objects)
 
@@ -91,7 +93,7 @@ public class SchemaUtils
     
     public boolean sync(objects)
     {
-       def order= ['table','index','sequence','synonym','view']
+       def order= ['table','index','sequence','synonym','view','materialized view']
        def parser= new XmlParser()
        def success= true
        def changes= []
@@ -176,9 +178,9 @@ public class SchemaUtils
     
     public extractFile(targetDir,type,name)
     {
-		def ltype= type.toLowerCase()
+		def ltype= type.toLowerCase();
 		def lname= name.toLowerCase()
-		def filePath= path("${targetDir}/${ltype}/${lname}.xml")
+		def filePath= path("${targetDir}/${ltype.replaceAll(' ','_')}/${lname}.xml")
 		ant.mkdir(dir: filePath.substring(0,filePath.lastIndexOf(File.separator)))
 		ant.truncate(file: filePath)
 		File file= new File(filePath)
@@ -209,7 +211,7 @@ public class SchemaUtils
         {
             try
             {
-                def camelType= type.substring(0,1).toUpperCase()+type.substring(1).toLowerCase()
+                def camelType= initcap(type);
                 def clazz= this.getClass().getClassLoader().loadClass("com.google.code.plsqlmaven.oraddl.helpers.${camelType}Helper")
                 helper= clazz.newInstance(sql,log,username);
                 helpers[type]= helper;
@@ -238,7 +240,7 @@ public class SchemaUtils
     public static getSourceDescriptor(File source)
     {
         def path= source.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
-        def type= path[path.length-2]
+        def type= path[path.length-2].replaceAll('_',' ')
         def name= path[path.length-1].split('\\.')[0]
         return ['name': name, 'type': type, 'file': source]
     }
@@ -277,5 +279,23 @@ public class SchemaUtils
 	{
 		return p.replace('/',File.separator)
 	}
+
+   private initcap(str) 
+   {
+	char[] name = str.toCharArray()
+	if (name.length == 0)
+		return ""
+	StringBuffer sb = new StringBuffer(name.length)
+	for (i in 0..name.length - 1) {
+		if (i == 0) {
+			sb.append(Character.toUpperCase(name[i]))
+		} else if (name[i] == ' ') {
+			name[i + 1] = Character.toUpperCase(name[i + 1])
+		} else {
+			sb.append(name[i])
+		}
+	}
+	return sb.toString()
+   }
 
 }
