@@ -670,7 +670,7 @@ class TableHelper extends OraDdlHelper
 	  {
 		  return [
 							  type: 'drop_constraint',
-							   ddl: "alter table ${oid(table.'@name')} drop primary key cascade",
+							   ddl: "alter table ${oid(table.'@name')} drop primary key cascade drop index",
 					   privMessage: "You need to: grant alter table to ${username}"
 				 ]
 	  }
@@ -696,7 +696,7 @@ class TableHelper extends OraDdlHelper
                                             and constraint_type= 'U'
                                             and constraint_name like 'SYS\\_C%' escape '\\';
                                          
-                                         execute immediate 'alter table "'||v_table||'" drop constraint "'||v_constraint||'" cascade';
+                                         execute immediate 'alter table "'||v_table||'" drop constraint "'||v_constraint||'" cascade drop index';
                                        
                                        end;""",
                        privMessage: "You need to: grant alter table to ${username}"
