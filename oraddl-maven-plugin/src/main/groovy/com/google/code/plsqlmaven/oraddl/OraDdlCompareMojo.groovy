@@ -46,7 +46,7 @@ public class OraDdlCompareMojo
    
    private parser= new XmlParser();
    
-   private order= ['table','index','sequence','synonym','view']
+   private order= ['table','index','sequence','synonym','view','materialized view']
    
    private helpers= [];
    
@@ -64,21 +64,35 @@ public class OraDdlCompareMojo
        }
        
        log.info project.basedir.absolutePath
+
        def files= getSchemaSourceFiles()
+       def objects= [:]
+
+       for (file in files)
+       {
+          def target= getSourceDescriptor(file);
+          def source= findSource(target,compareProject);
+
+          if (!objects[target.type]) objects[target.type]= []
+
+          objects[target.type] << [ 'target': target, 'source': source ]
+       }
+
        order.each
        {
            type ->
            def helper= schemaUtils.getHelper(type)
            helpers << helper
            helperCache[type]= helper
+
+           objects[type].each
+           {
+              object ->
+               generateDDL(object.source,object.target);           
+           }
+
        }
        
-       for (file in files)
-       {
-           def target= getSourceDescriptor(file);
-           def source= findSource(target,compareProject);
-           generateDDL(source,target);           
-       }
        
        log.info 'changes: '+changes.size()
    }
