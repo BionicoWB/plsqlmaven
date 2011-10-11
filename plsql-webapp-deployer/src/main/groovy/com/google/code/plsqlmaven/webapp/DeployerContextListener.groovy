@@ -47,7 +47,7 @@ class DeployerContextListener implements ServletContextListener
         
         def ant= new AntBuilder();
         def sql= getSql(ctx)
-        def plsqlUtils= new PlSqlUtils(ant,log,sql);
+        def plsqlUtils= new PlSqlUtils(ant,log,sql,true);
         def xdbUtils= new XdbUtils(ant,log,sql);
         def schemaUtils= new SchemaUtils(ant,log,sql);
         plsqlUtils.compileDirectory(ctx.getRealPath('WEB-INF/plsql'))   

@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven.oraddl.helpers
+package com.google.code.plsqlmaven.shared
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -18,26 +18,50 @@ package com.google.code.plsqlmaven.oraddl.helpers
 
 class DDLWriterThread extends Thread
 {
-       def ddl,log,helpers,mojo
-       
-       public DDLWriterThread(ddl,log,helpers,mojo)
+       private static instances= [:];
+
+       def ant= new AntBuilder();
+       def log,ddl
+       def mojos= []
+
+       public synchronized static getInstance(fileName)
        {
-           this.ddl= ddl
-           this.log= log
-           this.helpers= helpers
-           this.mojo= mojo
+            def instance 
+            if ((instance=instances[fileName])==null)
+            {
+              instance= new DDLWriterThread(fileName)
+              Runtime.getRuntime().addShutdownHook(instance);
+              instances[fileName]= instance;
+            }
+
+            return instance
+       }
+
+       private DDLWriterThread(fileName)
+       {
+              ant.mkdir(dir: 'target')
+              ddl= new File('target',fileName);
+              ant.truncate(file: ddl.absolutePath);
+       }
+
+       public void registerMojo(mojo)
+       {
+           log= mojo.log
+           mojos << mojo
        }
        
        public void run()
        {
-           def changes= mojo.changes
+           def changes= []
+           mojos.each{ changes += it.changes }
+           mojos.each{ changes = it.reorder(changes) }
+
            log.info "final changes: "+changes.size()
            
            if (changes.size()>0)
            {
                log.info "generating DDL ${ddl.absolutePath}..."
                
-               helpers.each{ changes= it.reorder(changes) }
                changes.each
                { 
                    change ->
@@ -61,7 +85,7 @@ class DDLWriterThread extends Thread
        }
 	   
       public mlc(multiLineText)
-	  {   
+      {   
 		  if (multiLineText.indexOf("\n")==-1)
 		    return multiLineText
 			

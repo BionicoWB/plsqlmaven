@@ -33,17 +33,21 @@ public class PlSqlUtils
     
     private log;
 
-    public PlSqlUtils(ant,log)
+    private dropForceTypes;
+
+    public PlSqlUtils(ant,log,dropForceTypes)
     {
         this.ant= ant;
         this.log= log;
+        this.dropForceTypes= dropForceTypes;
     }
     
-    public PlSqlUtils(ant,log,sql)
+    public PlSqlUtils(ant,log,sql,dropForceTypes)
     {
         this.ant= ant;
         this.log= log;
         this.sql= sql;
+        this.dropForceTypes= dropForceTypes;
     }
     
     public void setSql(sql)
@@ -96,7 +100,7 @@ public class PlSqlUtils
     
     public getTypeExt(type)
     {
-        switch (type)
+        switch (type.toLowerCase())
         {
             case 'package':
                return 'pks'
@@ -122,22 +126,29 @@ public class PlSqlUtils
     public compile(File source)
     {
         def ddl= source.getText().replace('\r','')
-		log.debug ddl
-		def sp= ddl.lastIndexOf("/")
-		
-		if (sp>0)
+        log.debug ddl
+        def sp= ddl.lastIndexOf("/")
+
+        if (dropForceTypes)
+        { 
+           def desc= getSourceDescriptor(source)
+           if (desc.type=='TYPE')
+              sql.execute("drop type ${desc.name} force".toString());
+        }	
+
+        if (sp>0)
          ddl= ddl.substring(0,sp)
         
 		try
 		{
-           sql.execute(ddl)
+                     sql.execute(ddl)
 		}
 		catch (SQLException ex)
 		{
 			// ignore compile errors (we will read user_errors) 
 			if (ex.errorCode!=24344)
 			  throw ex
-	    }
+        	}
     }
     
     public compileDirectory(String dirPath)

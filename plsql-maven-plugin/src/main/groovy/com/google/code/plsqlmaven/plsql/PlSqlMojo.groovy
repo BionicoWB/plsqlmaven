@@ -64,6 +64,12 @@ public abstract class PlSqlMojo
     */
     protected org.apache.maven.project.MavenProject project
    
+   /**
+   * Whether to use DROP TYPE <type> FORCE before type spec compilation
+   * @since 1.10
+   * @parameter expression="${dropForceTypes}"
+   */
+    protected boolean dropForceTypes;
     
     /**
      * Database connection helper
@@ -155,7 +161,7 @@ public abstract class PlSqlMojo
     public PlSqlUtils getPlsqlUtils()
     {
          if (!plsqlUtils)
-           plsqlUtils= new PlSqlUtils(ant,log)
+           plsqlUtils= new PlSqlUtils(ant,log,dropForceTypes)
          
          return plsqlUtils
     }

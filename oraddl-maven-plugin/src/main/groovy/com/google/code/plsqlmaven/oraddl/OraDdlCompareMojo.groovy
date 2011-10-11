@@ -19,7 +19,8 @@ package com.google.code.plsqlmaven.oraddl
 import org.apache.maven.project.MavenProject
 import org.apache.maven.model.Model
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader
-import com.google.code.plsqlmaven.oraddl.helpers.DDLWriterThread
+import com.google.code.plsqlmaven.shared.DDLWriterThread
+import org.apache.maven.plugin.logging.Log
 
 /**
  * Compare two different project trees
@@ -46,7 +47,7 @@ public class OraDdlCompareMojo
    
    private parser= new XmlParser();
    
-   private order= ['table','index','sequence','synonym','view','materialized view']
+   private order= ['table','sequence','synonym','view','materialized view','index']
    
    private helpers= [];
    
@@ -56,11 +57,8 @@ public class OraDdlCompareMojo
    {
        if (!compareProject) 
        {
-            ant.mkdir(dir: 'target')
-            def ddl= new File('target','compare.sql');
-            ant.truncate(file: ddl.absolutePath);
             compareProject= dirToProject(to);
-            Runtime.getRuntime().addShutdownHook(new DDLWriterThread(ddl,log,helpers,this))
+            DDLWriterThread.getInstance('compare.sql').registerMojo(this);
        }
        
        log.info project.basedir.absolutePath
@@ -169,6 +167,17 @@ public class OraDdlCompareMojo
          return o;
        else
          return [o];
+   }
+
+   public Log getLog()
+   {
+      return super.log
+   }
+
+   public reorder(changes)
+   {
+         helpers.each { changes = it.reorder(changes) }
+         return changes
    }
 
 }

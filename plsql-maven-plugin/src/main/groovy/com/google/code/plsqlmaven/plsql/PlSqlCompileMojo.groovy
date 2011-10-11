@@ -42,7 +42,7 @@ public class PlSqlCompileMojo
    * @since 1.9
    * @parameter expression="${loop}"
    */
-	private int loop;
+    private int loop;
 
     /**
      * Location of the touch file.
@@ -116,7 +116,7 @@ public class PlSqlCompileMojo
             
             getLastCompileTime();
             
-            if (determineChangedFiles())
+            if (determineChangedFiles()||loop)
             {
             
                 if (!connectToDatabase())
@@ -126,34 +126,30 @@ public class PlSqlCompileMojo
                 }
             
                 def compileThings= 
-				{
-					getLastCompileTime();
-					
-					determineChangedFiles();
-					
-	                compileChangedFiles();
-	                
-	                success= reportCompileErrors();
-	                
-					touchReferenceFile();
-				}
+		{
+			compileChangedFiles();
+			success= reportCompileErrors();
+			touchReferenceFile();
+		}
+		
+		if (loop)
+			while (true)
+			{
+				compileThings()
+				Thread.currentThread().sleep(loop*1000)
+				getLastCompileTime()
+				determineChangedFiles()
+			}
+		else
+		   compileThings()
 				
-				if (loop)
-					while (true)
-					{
-						compileThings()
-						Thread.currentThread().sleep(loop*1000)
-					}
-	    			    else
-					    compileThings()
+		buildXmlReport() // create an xml report for UI integration
 						
-				buildXmlReport(); // create an xml report for UI integration
-						
-                disconnectFromDatabase();
+                disconnectFromDatabase()
 				
             }
-			else
-			   success= true
+    	    else
+	        success= true
                 
             if (!success)
              fail('PL/SQL errors found.')
@@ -186,10 +182,36 @@ public class PlSqlCompileMojo
             
             sources << sd 
         }
+
+        if (dropForceTypes) ensureTypeBodies()
         
         log.info("found ${cnt} changed sources...");
         
-        return (sources.size()>0)
+        return (cnt>0)
+    }
+
+    public void ensureTypeBodies()
+    {
+          def ensuredSources= sources.clone()
+
+          sources.each
+          {
+               source ->
+
+               if (source.type=='TYPE'&&source.changed)
+               {
+                   def body= ensuredSources.find{ body -> (body.name == source.name && body.type == 'TYPE BODY') }
+
+                   if (body)
+                   {
+                     body.changed = true
+                     ensuredSources.remove(body)
+                     ensuredSources << body
+                   }
+               }
+          }
+
+          sources= ensuredSources
     }
 
     public boolean reportCompileErrors()
