@@ -124,4 +124,5 @@ abstract class OraDdlHelper
       public abstract detectChanges(source,target);
       
       public abstract create(xml);
+
 }

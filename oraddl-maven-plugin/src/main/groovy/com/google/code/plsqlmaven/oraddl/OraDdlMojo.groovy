@@ -142,4 +142,8 @@ public abstract class OraDdlMojo
 		return multiLineText.replaceAll('^'+initial,'')
 	}
 
+    public String path2(String... dirs)
+    {
+        return dirs.findAll{ it }.join(File.separator) //thanks groovy
+    } 
 }

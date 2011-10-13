@@ -789,7 +789,7 @@ class TableHelper extends OraDdlHelper
 		  if (constraint.'@name')
 	          return [
 	                              type: 'drop_constraint',
-	                               ddl: "alter table ${oid(table.'@name')} drop constraint ${oid(constraint.'@name')} cascade",
+	                               ddl: "alter table ${oid(table.'@name')} drop constraint ${oid(constraint.'@name')} cascade"+(constraint.'@type' in ['primary','unique'] ? ' drop index' : ''),
 	                       privMessage: "You need to: grant alter table to ${username}"
 	                 ]
 		  else

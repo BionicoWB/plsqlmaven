@@ -1,4 +1,4 @@
-package com.google.code.plsqlmaven.oraddl
+package com.google.code.plsqlmaven.plsql
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -24,13 +24,14 @@ import org.apache.maven.plugin.logging.Log
 
 /**
  * Compare two different project trees
- * and produce the DDL to bring the compared tree
- * to the current one
+ * and produce the DDL to drop objects
+ * found in the current project and not 
+ * in the -Dto project
  * 
- * @goal compare
+ * @goal drop-removed
  */
-public class OraDdlCompareMojo
-    extends OraDdlMojo
+public class PlSqlDropRemovedMojo
+    extends PlSqlMojo
 {
 
    /**
@@ -51,70 +52,41 @@ public class OraDdlCompareMojo
    
    public static changes= [];
    
-   private parser= new XmlParser();
-   
-   private order= ['table','sequence','synonym','view','materialized view','index']
-   
-   private helpers= [];
-   
-   private helperCache= [:];
-   
    void execute()
    {
        if (!compareProject) 
        {
             compareProject= dirToProject(to);
-            ddlWriter.getInstance('target','compare.sql').registerMojo(this);
+            log.debug('ddlwt: '+ddlWriter);
+            ddlWriter.getInstance(path2(to,'target'),'drop.sql').registerMojo(this);
        }
        
        log.info project.basedir.absolutePath
 
-       def files= getSchemaSourceFiles()
-       def objects= [:]
+       def files= getPlsqlSourceFiles()
 
        for (file in files)
        {
           def target= getSourceDescriptor(file);
           def source= findSource(target,compareProject);
-
-          if (!objects[target.type]) objects[target.type]= []
-
-          objects[target.type] << [ 'target': target, 'source': source ]
+          generateDDL(source,target)
        }
 
-       order.each
-       {
-           type ->
-           def helper= schemaUtils.getHelper(type)
-           helpers << helper
-           helperCache[type]= helper
-
-           objects[type].each
-           {
-              object ->
-               generateDDL(object.source,object.target);           
-           }
-
-       }
-       
-       
        log.info 'changes: '+changes.size()
    }
    
    private findSource(source,project)
    {
-       def filePath= project.basedir.absolutePath+File.separator+
-                     "src"+File.separator+
-                     "main"+File.separator+
-                     "schema"+File.separator+
-                     source.type+File.separator+
-                     source.name+'.xml';
-       def file= new File(filePath);              
+       def filePath= path2(project.basedir.absolutePath,'src','main','plsql',
+                           source.baseType,
+                           (source.baseType in ['type','package'] ? source.name.toLowerCase() : ''),
+                           source.name.toLowerCase()+'.'+plsqlUtils.getTypeExt(source.type)+'.plsql');
+       def file= new File(filePath);
        def exists= file.exists();
        log.debug filePath+' exists? '+(exists ? 'yes' : 'no')
        
        if (exists)
-         return schemaUtils.getSourceDescriptor(file);
+         return plsqlUtils.getSourceDescriptor(file);
        else
        {
            for (module in project.modules)
@@ -149,30 +121,16 @@ public class OraDdlCompareMojo
    
    private generateDDL(source, target)
    {
-       def helper= helperCache[target.type]
-       def targetXml= parser.parse(target.file)
-       
        log.debug "target: ${target.file.absolutePath}"
               
        if (!source)
-       {
-           changes += ensureList(helper.create(targetXml))
-       }
-       else
-       {
-           def sourceXml= parser.parse(source.file);
-           log.debug "source: ${source.file.absolutePath}"
-           
-           changes += ensureList(helper.detectChanges(sourceXml,targetXml))
-       }
+           changes << drop(target)
    }
    
-   private ensureList(o)
+   private drop(object)
    {
-       if (o instanceof List)
-         return o;
-       else
-         return [o];
+      return [ ddl: "drop ${object.type} ${object.name}"+(object.type=='TYPE' ? ' force' : ''), 
+               privMessage: "you need to grant drop ${object.type} to ${username}" ]
    }
 
    public Log getLog()
@@ -182,7 +140,6 @@ public class OraDdlCompareMojo
 
    public reorder(changes)
    {
-         helpers.each { changes = it.reorder(changes) }
          return changes
    }
 

@@ -24,12 +24,13 @@ import org.apache.maven.plugin.logging.Log
 
 /**
  * Compare two different project trees
- * and produce the DDL to bring the compared tree
- * to the current one
+ * and produce the DDL to drop objects
+ * found in the current project and not 
+ * in the -Dto project
  * 
- * @goal compare
+ * @goal drop-removed
  */
-public class OraDdlCompareMojo
+public class OraDdlDropRemovedMojo
     extends OraDdlMojo
 {
 
@@ -40,7 +41,7 @@ public class OraDdlCompareMojo
     * @parameter expression="${to}"
     */
    protected String to;
-   
+
    /**
     * DDL file writer
     * @component
@@ -64,7 +65,8 @@ public class OraDdlCompareMojo
        if (!compareProject) 
        {
             compareProject= dirToProject(to);
-            ddlWriter.getInstance('target','compare.sql').registerMojo(this);
+            log.debug('ddlwt: '+ddlWriter);
+            ddlWriter.getInstance(path2(to,'target'),'drop.sql').registerMojo(this);
        }
        
        log.info project.basedir.absolutePath
@@ -155,24 +157,13 @@ public class OraDdlCompareMojo
        log.debug "target: ${target.file.absolutePath}"
               
        if (!source)
-       {
-           changes += ensureList(helper.create(targetXml))
-       }
-       else
-       {
-           def sourceXml= parser.parse(source.file);
-           log.debug "source: ${source.file.absolutePath}"
-           
-           changes += ensureList(helper.detectChanges(sourceXml,targetXml))
-       }
+           changes << drop(target)
    }
    
-   private ensureList(o)
+   private drop(object)
    {
-       if (o instanceof List)
-         return o;
-       else
-         return [o];
+      return [ ddl: "drop ${object.type} ${object.name}"+(object.type=='table' ? ' cascade purge' : ''), 
+               privMessage: "you need to grant drop ${object.type} to ${username}" ]
    }
 
    public Log getLog()
@@ -182,7 +173,6 @@ public class OraDdlCompareMojo
 
    public reorder(changes)
    {
-         helpers.each { changes = it.reorder(changes) }
          return changes
    }
 

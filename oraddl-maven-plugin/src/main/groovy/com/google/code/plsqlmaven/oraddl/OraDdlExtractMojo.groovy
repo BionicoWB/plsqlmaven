@@ -148,7 +148,7 @@ public class OraDdlExtractMojo
        for (file in scanner)
        {
            def path= file.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
-           def type= path[path.length-2]
+           def type= path[path.length-2].replaceAll('_',' ')
            def name= path[path.length-1].split('\\.')[0]
 		   
 		   try

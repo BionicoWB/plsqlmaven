@@ -16,32 +16,42 @@ package com.google.code.plsqlmaven.shared
  * limitations under the License.
  */
 
+/**
+ * Writes a DDL file using changes produced by various mojos
+ * @plexus.component role="com.google.code.plsqlmaven.shared.DDLWriterThread"
+ */
 class DDLWriterThread extends Thread
 {
-       private static instances= [:];
+       private instances= [:];
 
        def ant= new AntBuilder();
        def log,ddl
        def mojos= []
 
-       public synchronized static getInstance(fileName)
+       public getInstance(dir,fileName)
        {
             def instance 
-            if ((instance=instances[fileName])==null)
+
+            def finalPath= dir+File.separator+fileName
+
+            if ((instance=instances[finalPath])==null)
             {
-              instance= new DDLWriterThread(fileName)
-              Runtime.getRuntime().addShutdownHook(instance);
-              instances[fileName]= instance;
+              instances[finalPath]= instance= new DDLWriterThread()
+              instance.writeTo(dir,fileName)
+              Runtime.getRuntime().addShutdownHook(instance)
             }
 
             return instance
        }
 
-       private DDLWriterThread(fileName)
+       public DDLWriterThread()
+       {}
+
+       public void writeTo(dir,fileName)
        {
-              ant.mkdir(dir: 'target')
-              ddl= new File('target',fileName);
-              ant.truncate(file: ddl.absolutePath);
+              ant.mkdir(dir: dir)
+              ddl= new File(dir,fileName);
+//              ant.truncate(file: ddl.absolutePath);
        }
 
        public void registerMojo(mojo)

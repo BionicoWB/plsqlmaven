@@ -179,9 +179,14 @@ public abstract class PlSqlMojo
             return oracleIdentifier.toLowerCase()
     }
 
-	public String path(p)
-	{
-		return p.replace('/',File.separator)
-	}
+    public String path(p)
+    {
+         return p.replace('/',File.separator)
+    }
+
+    public String path2(String... dirs)
+    {
+        return dirs.findAll{ it }.join(File.separator) //thanks groovy
+    } 
 
 }

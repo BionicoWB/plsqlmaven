@@ -1,0 +1,9 @@
+<component-set>
+  <components>
+    <component>
+      <role>com.google.code.plsqlmaven.shared.DDLWriterThread</role>
+      <implementation>com.google.code.plsqlmaven.shared.DDLWriterThread</implementation>
+      <instantiation-strategy>singleton</instantiation-strategy>
+    </component>
+  </components>
+</component-set>

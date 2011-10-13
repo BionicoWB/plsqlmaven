@@ -49,7 +49,7 @@ class ExtractObjectsThread extends Thread
 		   def objectsQuery="""select object_name,
 			 						  object_type
 								 from user_objects
-							    where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW')
+							    where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW','MATERIALIZED VIEW')
 							 	  and object_name not like 'SYS\\_%' escape '\\'"""+
 						   typeFilter+
 						   buildObjectsFilter()+
