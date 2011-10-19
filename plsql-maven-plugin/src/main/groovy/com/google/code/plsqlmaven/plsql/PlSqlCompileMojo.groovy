@@ -44,6 +44,13 @@ public class PlSqlCompileMojo
    */
     private int loop;
 
+   /**
+    * Whether to compile code natively in C or not
+    * @since 1.10
+    * @parameter expression="${native}"
+    */
+    private boolean nativeComp;
+
     /**
      * Location of the touch file.
      */
@@ -81,17 +88,18 @@ public class PlSqlCompileMojo
               fail('Need an Oracle connection')
               return
             }
+
+            if (nativeComp) setNativeCompilation();
             
 			def compileThings= 
 			{
-                    getLastCompileTime();
+                getLastCompileTime();
 			
 	            compileChangedFiles();
 	            
 	            success= reportCompileErrors();
 	                
 	            touchReferenceFile();
-			
 			}
 			
 			if (loop)
@@ -110,6 +118,12 @@ public class PlSqlCompileMojo
              fail('PL/SQL errors found.')
     }
 
+    private setNativeCompilation()
+    {
+       log.info('using NATIVE compilation');
+       sql.execute("alter session set plsql_code_type='NATIVE'");
+    }
+
     private compileSources()
     {
             def success= false;
@@ -124,26 +138,28 @@ public class PlSqlCompileMojo
                   fail('Need an Oracle connection')
                   return
                 }
+
+                if (nativeComp) setNativeCompilation();
             
                 def compileThings= 
-		{
-			compileChangedFiles();
-			success= reportCompileErrors();
-			touchReferenceFile();
-		}
-		
-		if (loop)
-			while (true)
-			{
-				compileThings()
-				Thread.currentThread().sleep(loop*1000)
-				getLastCompileTime()
-				determineChangedFiles()
-			}
-		else
-		   compileThings()
-				
-		buildXmlReport() // create an xml report for UI integration
+                {
+                    compileChangedFiles();
+                    success= reportCompileErrors();
+                    touchReferenceFile();
+                }
+                
+                if (loop)
+                    while (true)
+                    {
+                        compileThings()
+                        Thread.currentThread().sleep(loop*1000)
+                        getLastCompileTime()
+                        determineChangedFiles()
+                    }
+                else
+                   compileThings()
+                    
+                buildXmlReport() // create an xml report for UI integration
 						
                 disconnectFromDatabase()
 				
