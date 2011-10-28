@@ -85,8 +85,6 @@ public class SchemaUtils
            objects[type] << ['file': file, 'name': name]
        }
 
-       logger.debug '------------------->'+objects
-       
        sync(objects)
 
     }
