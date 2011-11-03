@@ -107,7 +107,7 @@ public class OraDdlCompareMojo
                      "src"+File.separator+
                      "main"+File.separator+
                      "schema"+File.separator+
-                     source.type+File.separator+
+                     source.type.replaceAll(' ','_')+File.separator+
                      source.name+'.xml';
        def file= new File(filePath);              
        def exists= file.exists();

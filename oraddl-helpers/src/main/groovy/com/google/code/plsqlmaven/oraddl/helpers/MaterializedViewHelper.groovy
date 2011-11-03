@@ -98,7 +98,6 @@ class MaterializedViewHelper extends OraDdlHelper
           {
               changes << drop(source)
               changes << create(target)
-              
           }
           
           
@@ -117,8 +116,8 @@ class MaterializedViewHelper extends OraDdlHelper
               source.columns.column.eachWithIndex
               {
                     sourceCol, index -> 
-                    
-                    def targetCol= target.columns.column[index]; 
+
+                    def targetCol= target.columns.column[index]
                     
                     if (!cmp(sourceCol,targetCol,'name'))
                     {
@@ -157,7 +156,7 @@ class MaterializedViewHelper extends OraDdlHelper
 
       private refreshClause(mview)
       {
-            return " refresh ${mview.'@refresh-method'} on "+(mview.'@refresh-mode' ? mview.'@refresh-mode' : 'demand');
+            return " refresh "+(mview.'@refresh-method' ? mview.'@refresh-method' : 'force')+" on "+(mview.'@refresh-mode' ? mview.'@refresh-mode' : 'demand');
       }
      
       private buildClause(mview)
