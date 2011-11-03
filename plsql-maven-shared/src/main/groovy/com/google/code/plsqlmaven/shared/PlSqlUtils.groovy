@@ -242,8 +242,10 @@ public class PlSqlUtils
 			 file << it.text
 			 last_text= it.text
 		  }
+
+          log.info('newline: '+last_text.endsWith("\n"))
 		  
-		  file << (last_text.endsWith(";") ? "\n/" : "/")
+		  file << (last_text.endsWith("\n") ? "/" : "\n/")
 	}
 
 	public get_dir(base,name)
