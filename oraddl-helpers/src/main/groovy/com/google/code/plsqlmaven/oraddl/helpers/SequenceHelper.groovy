@@ -147,7 +147,7 @@ class SequenceHelper extends OraDdlHelper
       {
           def ddl;
    
-          if (change.maxvalue!=null)
+          if (sequence.maxvalue!=null)
             ddl= "alter sequence ${oid(sequence.'@name')} maxvalue ${sequence.'@max-value'}"
           else
             ddl= "alter sequence ${oid(sequence.'@name')} nomaxvalue"
