@@ -793,6 +793,13 @@ class TableHelper extends OraDdlHelper
 	                       privMessage: "You need to: grant alter table to ${username}"
 	                 ]
 		  else
+          if (constraint.'@type'=='not-null')
+	          return [
+	                              type: 'drop_constraint',
+	                               ddl: "alter table ${oid(table.'@name')} modify (${constraint.columns.column[0].'@name'} null)",
+	                       privMessage: "You need to: grant alter table to ${username}"
+	                 ]
+          else
 			  return "drop_${constraint.'@type'}_constraint"(table,constraint)
       }
       
@@ -880,7 +887,7 @@ class TableHelper extends OraDdlHelper
       public modify_simple_notnull(changes,table,targetCol,sourceCol)
       {
           if (sourceCol.'@not-null'=='true')
-            changes << drop_constraint(table,col_to_check(sourceCol,sourceCol.'@name'+' is not null'))
+            changes << drop_constraint(table,col_to_notnull(sourceCol))
             
           if (targetCol.'@not-null'=='true')
             changes << add_constraint(table,col_to_notnull(targetCol))
