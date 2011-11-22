@@ -123,17 +123,30 @@ public class PlSqlGatewayMojo
     {
         wac.setInitParams(['com.google.code.eforceconfig.CONFIGSET_NAME': 'embedded'])
         
-        def confDir= project.build.directory+File.separator+'gateway-config'+File.separator+'plsqlgateway';
+        def confDir= project.build.directory+path('/gateway-config/plsqlgateway');
         ant.mkdir(dir: confDir);
         def general= new File(confDir,'general.xml')
         ant.truncate(file: general.absolutePath)
-        general << this.getClass().getClassLoader().getResourceAsStream('com/google/code/plsqlmaven/plsqlgateway/config/plsqlgateway/general.xml')
+
+        def userGeneral= new File(project.basedir.absolutePath+path('/src/main/webapp/WEB-INF/entity-config/plsqlgateway/general.xml'))
+
+        if (!userGeneral.exists())
+            general << this.getClass().getClassLoader().getResourceAsStream('com/google/code/plsqlmaven/plsqlgateway/config/plsqlgateway/general.xml')
+        else
+            general << userGeneral.getText()
+
         def embedded= new File(confDir,'embedded.xml')
         ant.truncate(file: embedded.absolutePath)
-        embedded << getTemplate('com/google/code/plsqlmaven/plsqlgateway/config/plsqlgateway/embedded.xml',['defaultPage': defaultPage])
+        
+        def userEmbedded= new File(project.basedir.absolutePath+path('/src/main/webapp/WEB-INF/entity-config/plsqlgateway/embedded.xml'))
+
+        if (!userEmbedded.exists())
+          embedded << getTemplate('com/google/code/plsqlmaven/plsqlgateway/config/plsqlgateway/embedded.xml',['defaultPage': defaultPage])
+        else
+          embedded << userEmbedded.getText()
 
         FileConfigInitializer fci= new FileConfigInitializer();
-        fci.setConfigSourceManager(new FileSourceManager(project.build.directory+File.separator+'gateway-config'));
+        fci.setConfigSourceManager(new FileSourceManager(project.build.directory+path('/gateway-config')));
         new Config("embedded").init(fci);
         
         wac.setAttribute(DADContextListener.DAD_DATA_SOURCE+"|embedded", getCurrentDS())
