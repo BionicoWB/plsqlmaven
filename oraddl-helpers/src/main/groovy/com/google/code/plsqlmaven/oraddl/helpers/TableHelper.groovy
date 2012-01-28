@@ -563,6 +563,11 @@ class TableHelper extends OraDdlHelper
               changes+= column_number_to_varchar2(table,targetCol);
           }
           else
+          if (targetCol.'@type'=='number'&&sourceCol.'@type'=='varchar2')
+          {
+              changes+= column_varchar2_to_number(table,targetCol);
+          }
+          else
           if (targetCol.'@type'=='number'&&sourceCol.'@type'=='number'&&
               ((!cmp(sourceCol,targetCol,'precision')
                   &&(!(dv(targetCol.'@precision'?.toInteger(),9999999)>dv(sourceCol.'@precision'?.toInteger(),9999999))))
@@ -976,6 +981,83 @@ class TableHelper extends OraDdlHelper
           
           return changes;
       }
+      
+      private column_varchar2_to_number(table,column)
+      {
+          def changes= [];
+          def tempIndex= tempColIndex--;
+          def columnType= getColumnType(column);
+          
+          try
+          {
+             changes << [
+                             type: 'drop_maven_temporary_column',
+                         mainType: 'modify_column',
+                        tempIndex: tempIndex,
+                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
+                         failSafe: true
+                        ]
+          }
+          catch (Exception ex)
+          {}
+          
+          changes << [
+                              type: 'add_maven_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} add (mvn_${tempIndex} ${columnType})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          changes << [
+                              type: 'maven_translate_values_varchar2_to_number',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: """declare
+                                          v_value ${columnType};
+                                          
+                                          function to_number2(p_old varchar2, p_rowid varchar2)
+                                          return varchar2
+                                          as 
+                                             v_value ${columnType};
+                                          begin
+                                             v_value:= to_number(p_old);
+                                             return v_value;
+                                          exception
+                                            when others then 
+                                               raise_application_error(-20001,'Found an invalid number: '||p_old||' at rowid: '||p_rowid);
+                                          end;
+                                     begin
+                                          for c_cur in (select rowid rwid, ${oid(column.'@name')} from ${oid(table.'@name')}) loop
+                                             v_value:= to_number2(c_cur.${oid(column.'@name')},c_cur.rwid);
+                                             update ${oid(table.'@name')}
+                                                set mvn_${tempIndex}= v_value
+                                              where rowid= c_cur.rwid;
+                                          end loop;
+                                          commit;
+                                     end;
+                                   """
+                     ]
+          
+          changes << [
+                              type: 'maven_drop_column_after_data_migration',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+
+          changes << [
+                              type: 'maven_rename_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} rename column mvn_${tempIndex} to ${oid(column.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          return changes;
+      }
+      
       
       private column_number_to_varchar2(table,column)
       {

@@ -62,13 +62,19 @@ public class OraDdlRemoveObsoleteMojo
        for (file in scanner)
        {
            def object= getSourceDescriptor(file)
-		   def xml= parser.parse(file)
 		   def helper= schemaUtils.getHelper(object.type)
 		   
-		   object.name= helper.oid(xml.'@name',false)
-		   object.type= object.type.toUpperCase() 
+		   try
+		   {
+   		      def xml= parser.parse(file)
+              object= ['name': xml.'@name', 'type': object.type]
+		   }
+		   catch (Exception ex)
+		   {
+			   object= ['name': object.name, 'type': object.type]
+		   }
 		   
-		   if (!(sql.firstRow("select 1 object_exists from user_objects where object_type= ${object.type} and object_name= ${object.name}")?.object_exists))
+		   if (!(sql.firstRow("select 1 object_exists from user_objects where object_type= '${object.type.toUpperCase()}' and object_name= '${oid(object.name,false)}'".toString())?.object_exists))
 		     if (force)
 		       ant.delete(file: file.absolutePath)
 			 else

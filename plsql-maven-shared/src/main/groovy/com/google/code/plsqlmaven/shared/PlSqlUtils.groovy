@@ -239,13 +239,11 @@ public class PlSqlUtils
 							and name= ${name}
 					   order by line""")
 		  {
-			 file << it.text
-			 last_text= it.text
+			 if (last_text) file << last_text
+			 last_text = it.text
 		  }
 
-          log.info('newline: '+last_text.endsWith("\n"))
-		  
-		  file << (last_text.endsWith("\n") ? "/" : "\n/")
+          file << last_text.replaceAll('(\n*)?$','')+"\n/"
 	}
 
 	public get_dir(base,name)
@@ -264,6 +262,7 @@ public class PlSqlUtils
 		  file << "create or replace view "+sid(name)
 		  
 		  def columns= []
+		  def last_text= "";
 		  
 		  sql.eachRow("select column_name from user_tab_columns a where table_name = ${name} order by column_id")
 		  { columns << sid(it.column_name) }
@@ -274,10 +273,11 @@ public class PlSqlUtils
 						   from user_views
 						  where view_name= ${name}""")
 		  {
-			 file << it.text
+			 if (last_text) file << last_text
+			 last_text = it.text
 		  }
 		  
-		  file << "\n/"
+          file << last_text.replaceAll('(\n*)?$','')+"\n/"
 	}
 
 	public sid(oracleIdentifier)
