@@ -71,6 +71,13 @@ public abstract class PlSqlMojo
    */
     protected boolean dropForceTypes;
     
+   /**
+    * Specify source directory
+    * @since 1.11
+    * @parameter expression="${sourceDir}"
+    */
+    private String sourceDir;
+
     /**
      * Database connection helper
      */
@@ -128,7 +135,7 @@ public abstract class PlSqlMojo
 
     public getPlsqlSourceFiles()
     {
-        return getPlsqlUtils().getPlsqlSourceFiles(project.build.sourceDirectory)
+        return getPlsqlUtils().getPlsqlSourceFiles((sourceDir ? sourceDir : project.build.sourceDirectory))
     }
     
     public getSourceDescriptor(file)
