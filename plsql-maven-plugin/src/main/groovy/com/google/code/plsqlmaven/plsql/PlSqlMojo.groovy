@@ -65,7 +65,7 @@ public abstract class PlSqlMojo
     protected org.apache.maven.project.MavenProject project
    
    /**
-   * Whether to use DROP TYPE <type> FORCE before type spec compilation
+   * Whether to use DROP TYPE mytype FORCE before type spec compilation
    * @since 1.10
    * @parameter expression="${dropForceTypes}"
    */
