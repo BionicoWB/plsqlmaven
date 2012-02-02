@@ -66,6 +66,13 @@ extends PlSqlMojo
     */
     private boolean skipDependencies;
 
+   /**
+    * Whether to skip resources and load classes only
+    * @since 1.11
+    * @parameter expression="${skipResources}"
+    */
+    private boolean skipResources;
+
     private toresolve= []
 
      void execute()
@@ -114,10 +121,15 @@ extends PlSqlMojo
                def desc= getFileDesc(file,file.absolutePath.substring(dir.absolutePath.length()+1));
 
                if (desc.isClass)
+               {
                   if (skipClasses) 
                      continue;
                   else
                      toresolve << desc
+               }
+               else
+                  if (skipResources)
+                    continue;
 
                if (!skipLoad)
                {
