@@ -19,7 +19,7 @@ package com.google.code.plsqlmaven.plsql
 import groovy.sql.Sql
 
 /**
- * Loads dependencies jar and java classes of the current java 
+ * Loads dependencies jar, java classes and resources of the current java 
  * project to the current database connection, the user should 
  * have the JAVAUSERPRIV role granted. 
  * 
