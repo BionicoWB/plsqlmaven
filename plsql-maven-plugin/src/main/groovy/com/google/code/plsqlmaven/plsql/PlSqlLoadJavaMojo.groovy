@@ -145,7 +145,8 @@ extends PlSqlMojo
                                    exception 
                                      when dup_val_on_index then
                                        update create\$java\$lob\$table
-                                          set lob= empty_blob
+                                          set lob= empty_blob,
+                                              loadtime= sysdate
                                         where name= ${desc.fullName}
                                     returning lob into v_blob;
                                    end;
