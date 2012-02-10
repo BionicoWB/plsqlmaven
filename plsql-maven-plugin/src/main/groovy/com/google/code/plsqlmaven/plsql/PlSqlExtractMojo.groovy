@@ -80,10 +80,10 @@ public class PlSqlExtractMojo
     
     private checkSourceDirectory()
     {
-        def continueExtraction= (force||!new File(project.build.sourceDirectory).exists())
+        def continueExtraction= (force||!new File(sourceDir).exists())
         
         if (continueExtraction)
-          ant.mkdir(dir: project.build.sourceDirectory)
+          ant.mkdir(dir: sourceDir)
         else
           fail('BE CAREFUL: The source directory exists... Remove it to regenerate PL/SQL source files')
           
@@ -123,7 +123,7 @@ public class PlSqlExtractMojo
 							
          sql.eachRow(objectsQuery)
 		 {
-			def file= plsqlUtils.extractFile(project.build.sourceDirectory,
+			def file= plsqlUtils.extractFile(sourceDir,
 							                 it.object_name,
 							                 it.object_type)
 			

@@ -68,7 +68,7 @@ public class PlSqlPackageMojo
         ant.mkdir(dir: plsqlOutputDirectory)
         ant.copy(todir: plsqlOutputDirectory)
         {
-          ant.fileset(dir: project.build.sourceDirectory)
+          ant.fileset(dir: sourceDir)
         }  
         
         /*

@@ -135,7 +135,7 @@ public abstract class PlSqlMojo
 
     public getPlsqlSourceFiles()
     {
-        return getPlsqlUtils().getPlsqlSourceFiles((sourceDir ? sourceDir : project.build.sourceDirectory))
+        return getPlsqlUtils().getPlsqlSourceFiles(getSourceDir())
     }
     
     public getSourceDescriptor(file)
@@ -153,6 +153,11 @@ public abstract class PlSqlMojo
             def dir= new File(base, name)
             if (!dir.exists()) dir.mkdir()
             return dir;
+    }
+
+    public String getSourceDir()
+    {
+            return (sourceDir ? sourceDir : project.build.sourceDirectory)
     }
     
     public String getTemplate(path,context)

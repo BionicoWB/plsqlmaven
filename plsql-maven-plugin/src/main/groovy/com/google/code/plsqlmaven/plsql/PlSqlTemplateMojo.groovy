@@ -61,7 +61,7 @@ public class PlSqlTemplateMojo
             // ignore if no error found
         }
         
-        ant.mkdir(dir: project.build.sourceDirectory)
+        ant.mkdir(dir: sourceDir)
         
         name= name.toLowerCase();
         type= type.toLowerCase();
@@ -71,14 +71,14 @@ public class PlSqlTemplateMojo
         
         if (! ((type =~ /^package/) || (type =~ /^type/)))
         {
-           def type_dir= get_dir(project.build.sourceDirectory, type)
+           def type_dir= get_dir(sourceDir, type)
            def target_file= new File(type_dir, name+".${ext}"+PLSQL_EXTENSION)
            target_file << getTemplate(templatePath,['name': name])
            log.info "created ${type}: "+target_file.absolutePath
         }
         else
         {
-           def type_dir= get_dir(project.build.sourceDirectory, type.split()[0])
+           def type_dir= get_dir(sourceDir, type.split()[0])
            def odir= get_dir(type_dir, name)
            def target_file= new File(odir, name+".${ext}"+PLSQL_EXTENSION)
            target_file << getTemplate(templatePath,['name': name])

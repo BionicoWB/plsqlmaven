@@ -51,7 +51,7 @@ public class PlSqlRemoveObsoleteMojo
    {
        def scanner=  ant.fileScanner
        {
-           fileset(dir: project.build.sourceDirectory)
+           fileset(dir: sourceDir)
            {
                include(name: '**/*.plsql')
            }
