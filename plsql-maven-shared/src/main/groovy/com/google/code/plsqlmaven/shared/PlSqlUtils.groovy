@@ -194,6 +194,7 @@ public class PlSqlUtils
 		def lname= name.toLowerCase()
 		def ltype= type.toLowerCase()
 		def ext= getTypeExt(ltype)
+        def target_file
 		
         if ((ltype =~ /^package/) || (ltype =~ /^type/))
         {
@@ -202,7 +203,7 @@ public class PlSqlUtils
 	         if (! (name =~ /^SYS_PLSQL_/)) // plsql generated types from pipelined functions
 	         {
 	             def odir= get_dir(type_dir, lname)
-	             def target_file= new File(odir, lname+".${ext}"+PLSQL_EXTENSION)
+	             target_file= new File(odir, lname+".${ext}"+PLSQL_EXTENSION)
 	             extract(name,ltype,target_file)
 	         }
         }
@@ -210,15 +211,17 @@ public class PlSqlUtils
 		if (ltype=='view')
 		{
            def type_dir= get_dir(targetDir, ltype)
-           def target_file= new File(type_dir, lname+".${ext}"+PLSQL_EXTENSION)
+           target_file= new File(type_dir, lname+".${ext}"+PLSQL_EXTENSION)
            extractView(name,target_file)
 	    }
         else
         {
            def type_dir= get_dir(targetDir, ltype)
-           def target_file= new File(type_dir, lname+".${ext}"+PLSQL_EXTENSION)
+           target_file= new File(type_dir, lname+".${ext}"+PLSQL_EXTENSION)
            extract(name,ltype,target_file)
         }
+
+        return target_file
 		
     }
 	
