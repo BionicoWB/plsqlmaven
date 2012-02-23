@@ -162,7 +162,7 @@ public class OraDdlDropRemovedMojo
    
    private drop(object)
    {
-      return [ ddl: "drop ${object.type} ${object.name}"+(object.type=='table' ? ' cascade purge' : ''), 
+      return [ ddl: "drop ${object.type} ${object.name}"+(object.type=='table' ? ' cascade contraints purge' : ''), 
                privMessage: "you need to grant drop ${object.type} to ${username}" ]
    }
 
