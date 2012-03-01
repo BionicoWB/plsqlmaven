@@ -25,6 +25,11 @@ class SequenceHelper extends OraDdlHelper
           super(sql,log,username);
       }
 
+      private sequenceMaxDefaultValue()
+      {
+         return sql.firstRow("select max(max_value) max_value from all_sequences").max_value;
+      }
+
       public boolean extract(name,xml)
       {
            sql.eachRow("select * from user_sequences where sequence_name = upper(${name})")
@@ -33,7 +38,7 @@ class SequenceHelper extends OraDdlHelper
               def cache= rd(seq.cache_size,20);
               xml.sequence('name':         xid(seq.sequence_name), 
                            'min-value':    rd(seq.min_value,1),
-                           'max-value':    rd(seq.max_value,999999999999999999999999999),
+                           'max-value':    rd(seq.max_value,sequenceMaxDefaultValue()),
                            'increment-by': rd(seq.increment_by,1),
                            'cache':        (cache=='0' ? 'false' : cache),
                            'cycle':        (seq.cycle_flag=='Y' ? 'true' : null),
@@ -106,7 +111,7 @@ class SequenceHelper extends OraDdlHelper
           if (!cmp(source,target,'min-value',1))
             changes << sequence_minvalue(target)
              
-          if (!cmp(source,target,'max-value',999999999999999999999999999))
+          if (!cmp(source,target,'max-value',sequenceMaxDefaultValue()))
             changes << sequence_maxvalue(target)
            
           if (!cmp(source,target,'increment-by',1))
@@ -147,7 +152,7 @@ class SequenceHelper extends OraDdlHelper
       {
           def ddl;
    
-          if (sequence.maxvalue!=null)
+          if (sequence.'@max-value'!=null)
             ddl= "alter sequence ${oid(sequence.'@name')} maxvalue ${sequence.'@max-value'}"
           else
             ddl= "alter sequence ${oid(sequence.'@name')} nomaxvalue"
