@@ -132,7 +132,8 @@ public class PlSqlUtils
         if (dropForceTypes)
         { 
            def desc= getSourceDescriptor(source)
-           if (desc.type=='TYPE')
+           if (desc.type=='TYPE'
+               &&sql.firstRow("select 1 type_exists from user_objects where object_name= ${desc.name} and object_type= 'TYPE'")?.type_exists)
               sql.execute("drop type ${desc.name} force".toString());
         }	
 
