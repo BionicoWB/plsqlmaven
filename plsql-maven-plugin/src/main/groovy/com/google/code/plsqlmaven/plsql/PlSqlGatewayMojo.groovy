@@ -95,7 +95,13 @@ public class PlSqlGatewayMojo
         connector.setHost(bindAddress);
         server.addConnector(connector);
 
+        ant.mkdir(dir: project.build.directory+path('/gateway-config'));
+        def webDefaultsFile= new File(project.build.directory+path('/gateway-config/webdefault.xml'))
+        ant.truncate(file: webDefaultsFile.absolutePath)
+        webDefaultsFile << configureDefaults(getTemplate('org/eclipse/jetty/webapp/webdefault.xml',[:]))
+
         WebAppContext wac = new WebAppContext();
+        wac.setDefaultsDescriptor(webDefaultsFile.absolutePath);
         wac.setContextPath(webappContext);
         wac.setWar(webappRoot);
         wac.addServlet(PLSQLGatewayServlet.class, "/pls/*");
@@ -150,6 +156,14 @@ public class PlSqlGatewayMojo
         new Config("embedded").init(fci);
         
         wac.setAttribute(DADContextListener.DAD_DATA_SOURCE+"|embedded", getCurrentDS())
+    }
+
+    private configureDefaults(text)
+    {
+        return text.replaceAll(/(?m)<init-param>[ \n]*?<param-name>useFileMappedBuffer<\/param-name>[ \n]*?<param-value>true<\/param-value>[ \n]*?<\/init-param>/,'''<init-param>
+      <param-name>useFileMappedBuffer</param-name>
+      <param-value>false</param-value>
+    </init-param>''')
     }
         
 }
