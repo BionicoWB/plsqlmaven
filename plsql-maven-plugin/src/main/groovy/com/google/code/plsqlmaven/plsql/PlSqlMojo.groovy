@@ -157,7 +157,7 @@ public abstract class PlSqlMojo
 
     public String getSourceDir()
     {
-            return (sourceDir ? sourceDir : project.build.sourceDirectory)
+            return (sourceDir ? project.basedir.absolutePath+File.separator+sourceDir : project.build.sourceDirectory)
     }
     
     public String getTemplate(path,context)
