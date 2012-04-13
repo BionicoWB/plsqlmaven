@@ -47,7 +47,7 @@
     <dependency>
       <groupId>com.google.code.plsqlgateway</groupId>
       <artifactId>plsqlgateway-core</artifactId>
-      <version>1.12-SNAPSHOT</version>
+      <version>1.12</version>
     </dependency>
     <dependency>
     	<groupId>com.google.code.eforceconfig</groupId>
