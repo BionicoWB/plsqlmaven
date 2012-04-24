@@ -242,6 +242,7 @@ public class PlSqlCompileMojo
              if (sd['errors']) 
 				 success= false
 			 else
+             if (!createForceViews||sd.type!='VIEW')
 			 {
 			     sd['errors']= []
 			 
@@ -269,7 +270,7 @@ public class PlSqlCompileMojo
 				 
 			 }
 			 
-             if ( sd.errors.size() > 0 )
+             if (sd['errors'] && sd.errors.size() > 0 )
              {
                  
                 log.error("file ${sd.file.absolutePath} has errors");

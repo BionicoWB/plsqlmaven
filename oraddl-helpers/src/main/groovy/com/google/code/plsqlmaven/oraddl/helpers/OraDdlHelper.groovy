@@ -116,7 +116,7 @@ abstract class OraDdlHelper
       {
           return changes
       }
-      
+
       public abstract boolean extract(name,xml);
 
       public abstract boolean exists(xml);

@@ -109,7 +109,7 @@ public class OraDdlDropRemovedMojo
                      "src"+File.separator+
                      "main"+File.separator+
                      "schema"+File.separator+
-                     source.type+File.separator+
+                     source.type.replaceAll(' ','_')+File.separator+
                      source.name+'.xml';
        def file= new File(filePath);              
        def exists= file.exists();
@@ -162,7 +162,7 @@ public class OraDdlDropRemovedMojo
    
    private drop(object)
    {
-      return [ ddl: "drop ${object.type} ${object.name}"+(object.type=='table' ? ' cascade contraints purge' : ''), 
+      return [ ddl: "drop ${object.type} ${object.name}"+(object.type=='table' ? ' cascade constraints purge' : ''), 
                privMessage: "you need to grant drop ${object.type} to ${username}" ]
    }
 

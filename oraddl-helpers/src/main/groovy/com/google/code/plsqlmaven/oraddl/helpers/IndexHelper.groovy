@@ -40,7 +40,8 @@ class IndexHelper extends OraDdlHelper
                def ind= it.toRowResult()
                xml.index('name':         xid(ind.index_name),
                          'table':        xid(ind.table_name),
-                         'unique':       (ind.uniqueness=='UNIQUE' ? 'true' : null))
+                         'unique':       (ind.uniqueness=='UNIQUE' ? 'true' : null),
+                         'bitmap':       (ind.index_type=='BITMAP' ? 'true' : null))
                { 
                    xml.columns()
                    {
@@ -83,12 +84,30 @@ class IndexHelper extends OraDdlHelper
       
       public create(index)
       {
-          def ddl= "create"+(index.'@unique'=='true' ? ' unique' : '')+" index ${oid(index.'@name')} on "+
+          def ddl = "create"+(index.'@unique'=='true' ? ' unique' : '')+
+                     (index.'@bitmap'=='true' ? ' bitmap' : '')+
+                    " index ${oid(index.'@name')} on "+
                         "${oid(index.'@table')} ("+
                         index.columns.column.
                          collect{ indexPart(it) }.
                          join(',')+
                         ")"
+ 
+          if (index.'@bitmap'=='true')
+            ddl= """declare
+                      v_ddl   varchar2(32767):= '${ddl}';
+                      v_dummy varchar2(4000);
+                    begin
+                      select banner
+                        into v_dummy 
+                        from v$version
+                       where banner like '%Enterprise%'
+                         and rownum < 2;
+                      execute immediate v_ddl;
+                    exception
+                       when no_data_found then
+                      execute immediate replace(v_ddl,'create bitmap ','create ');
+                    end;"""
                         
           return [ 
                           type: 'create_index', 

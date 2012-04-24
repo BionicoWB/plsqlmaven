@@ -72,6 +72,13 @@ public abstract class PlSqlMojo
     protected boolean dropForceTypes;
     
    /**
+   * Whether to use CREATE FORCE VIEW
+   * @since 1.11
+   * @parameter expression="${createForceViews}"
+   */
+    protected boolean createForceViews;
+    
+   /**
     * Specify source directory
     * @since 1.11
     * @parameter expression="${sourceDir}"
@@ -173,7 +180,7 @@ public abstract class PlSqlMojo
     public PlSqlUtils getPlsqlUtils()
     {
          if (!plsqlUtils)
-           plsqlUtils= new PlSqlUtils(ant,log,dropForceTypes)
+           plsqlUtils= new PlSqlUtils(ant,log,dropForceTypes,createForceViews)
          
          return plsqlUtils
     }

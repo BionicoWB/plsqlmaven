@@ -35,19 +35,23 @@ public class PlSqlUtils
 
     private dropForceTypes;
 
-    public PlSqlUtils(ant,log,dropForceTypes)
+    private createForceViews;
+
+    public PlSqlUtils(ant,log,dropForceTypes,createForceViews)
     {
         this.ant= ant;
         this.log= log;
         this.dropForceTypes= dropForceTypes;
+        this.createForceViews= createForceViews;
     }
     
-    public PlSqlUtils(ant,log,sql,dropForceTypes)
+    public PlSqlUtils(ant,log,sql,dropForceTypes,createForceViews)
     {
         this.ant= ant;
         this.log= log;
         this.sql= sql;
         this.dropForceTypes= dropForceTypes;
+        this.createForceViews= createForceViews;
     }
     
     public void setSql(sql)
@@ -263,7 +267,7 @@ public class PlSqlUtils
 		  
 		  ant.truncate(file: file.absolutePath)
 		  
-		  file << "create or replace view "+sid(name)
+		  file << "create or replace"+(createForceViews ? ' force' : '')+" view "+sid(name)
 		  
 		  def columns= []
 		  def last_text= "";
