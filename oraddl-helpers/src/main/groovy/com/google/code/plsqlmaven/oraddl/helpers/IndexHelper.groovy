@@ -131,12 +131,17 @@ class IndexHelper extends OraDdlHelper
           
           def recreate_index=          
           {
-              changes << drop(source)
+              if (source) 
+                changes << drop(source)
+              else // constraint index ?
+                changes << drop(target)
+
               changes << create(target)
           }
 
           if (  !cmp(source,target,'table')
               ||!cmp(source,target,'unique','false')
+              ||!cmp(source,target,'bitmap','false')
               || source.columns.column.size()!=target.columns.column.size())
             recreate_index();
           else
