@@ -100,7 +100,7 @@ class IndexHelper extends OraDdlHelper
                     begin
                       select banner
                         into v_dummy 
-                        from v$version
+                        from v\$version
                        where banner like '%Enterprise%'
                          and rownum < 2;
                       execute immediate v_ddl;
