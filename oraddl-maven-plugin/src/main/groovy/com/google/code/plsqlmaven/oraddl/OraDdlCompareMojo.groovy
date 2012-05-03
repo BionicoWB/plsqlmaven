@@ -142,6 +142,7 @@ public class OraDdlCompareMojo
 
        reader = new FileReader(pomfile)
        model = mavenreader.read(reader)
+       reader.close()
        def project= new MavenProject(model)
        project.basedir= new File(dir)
        return project

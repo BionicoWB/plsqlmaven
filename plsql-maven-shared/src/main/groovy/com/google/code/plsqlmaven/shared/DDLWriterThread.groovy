@@ -102,7 +102,7 @@ class DDLWriterThread extends Thread
 		  def torm= (multiLineText =~ '(?m)^ *')
 		  
 		  if (torm.size()>1)
-		    return multiLineText.replaceAll(torm[1],'')
+		    return multiLineText.replaceAll('(?m)^ *','')
       }
 
 }

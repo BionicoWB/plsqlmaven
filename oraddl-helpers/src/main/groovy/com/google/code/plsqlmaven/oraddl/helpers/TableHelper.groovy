@@ -1220,7 +1220,7 @@ class TableHelper extends OraDdlHelper
 	  
 	  public set_table_comment(table)
 	  {
-		  def escapedComment= table.comment?.text()?.replace("'","''")
+		  def escapedComment= table.comment?.text()?.replaceAll("'","''")
 		  
 		  return [
 					  type: 'table_comment',
@@ -1231,7 +1231,7 @@ class TableHelper extends OraDdlHelper
       
 	  public set_column_comment(table,column)
 	  {
-		  def escapedComment= column.comment?.text()?.replace("'","''")
+		  def escapedComment= column.comment?.text()?.replaceAll("'","''")
 		  
 		  return [
 					  type: 'column_comment',
