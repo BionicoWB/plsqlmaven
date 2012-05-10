@@ -27,7 +27,10 @@ class SequenceHelper extends OraDdlHelper
 
       private sequenceMaxDefaultValue()
       {
-         return sql.firstRow("select max(max_value) max_value from all_sequences").max_value;
+         if (sql)
+           return sql.firstRow("select max(max_value) max_value from all_sequences").max_value;
+         else
+           return null;
       }
 
       public boolean extract(name,xml)
