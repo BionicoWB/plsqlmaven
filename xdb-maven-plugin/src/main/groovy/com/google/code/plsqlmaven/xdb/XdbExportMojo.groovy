@@ -84,7 +84,9 @@ public class XdbExportMojo
         
         def things_to_do_to_export_a_path= 
         {
-            def path= xdbSourceDirectory+it.path.replaceAll('/',File.separator)
+            def path= it.path
+            log.debug "path: "+path
+            path= xdbSourceDirectory+it.path.replaceAll('/',(File.separator=='\\' ? '\\\\' : '/'))
             def content= it.content?.binaryStream
             
             
