@@ -606,13 +606,20 @@ class TableHelper extends OraDdlHelper
 		  def ddl= "alter table ${oid(table.'@name')} "
 		  
 		  if (constraint.'@type'=='not-null')
-              ddl+= "modify (${constraint.columns.column[0].'@name'} not null)"
+          {
+              if (System.getProperty("disableConstraints")!=null)
+               ddl+= "add check (${constraint.columns.column[0].'@name'} is not null) disable"
+              else
+               ddl+= "modify (${constraint.columns.column[0].'@name'} not null)"
+          }
           else
 		  {
 			  ddl+= "add "+(constraint.'@name' ? "constraint ${oid(constraint.'@name')}\n" : '')
+
+              def tbs= System.getProperty("indexTablespace")
 			  
 	          if (constraint.'@type'=='primary')
-	              ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"
+	              ddl+="primary key ("+constraint.columns.column*.'@name'.join(',')+")"+(tbs!=null ? " using index tablespace ${tbs}" : "")
 	          else
 	          if (constraint.'@type'=='foreign')
 	          {
@@ -629,7 +636,11 @@ class TableHelper extends OraDdlHelper
 	              ddl+="check ("+constraint.'@expression'+")"
 	          else
 	          if (constraint.'@type'=='unique')
-	              ddl+="unique ("+constraint.columns.column*.'@name'.join(',')+")"
+	              ddl+="unique ("+constraint.columns.column*.'@name'.join(',')+")"+(tbs!=null ? " using index tablespace ${tbs}" : "")
+
+              if (System.getProperty("disableConstraints")!=null)
+	              ddl+=" disable";
+                
 		  }
           
           return [

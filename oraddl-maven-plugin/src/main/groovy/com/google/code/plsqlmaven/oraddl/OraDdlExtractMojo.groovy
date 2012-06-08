@@ -62,6 +62,14 @@ public class OraDdlExtractMojo
    */
    private String exclude;
 
+  /**
+   * Include this objects in the extraction (comma separated list of
+   * Oracle regular expressions for REGEXP_LIKE operator)
+   * @since 1.9
+   * @parameter expression="${include}"
+   */
+   private String include;
+
    void execute()
    {
        if (checkSourceDirectory())
@@ -108,6 +116,9 @@ public class OraDdlExtractMojo
        if (exclude)
          excludeFilter= buildExcludeFilter()
 		 
+       if (include)
+         includeFilter= buildIncludeFilter()
+		 
        def objectsQuery="""select object_name, 
                                   object_type
                              from user_objects a
@@ -117,7 +128,8 @@ public class OraDdlExtractMojo
 						typeFilter+
 					    objectsFilter+
 						existingFilter+
-						excludeFilter
+						excludeFilter+
+						includeFilter
                               
        log.debug objectsQuery 
 	                                    
@@ -174,6 +186,13 @@ public class OraDdlExtractMojo
 	   def excludes= exclude.split(',')
 	   
 	   return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
+   }
+
+   private buildIncludeFilter()
+   {
+	   def excludes= exclude.split(',')
+	   
+	   return ' and ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
    }
 
 }

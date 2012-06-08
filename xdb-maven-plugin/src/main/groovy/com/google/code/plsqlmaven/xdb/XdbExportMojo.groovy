@@ -84,6 +84,7 @@ public class XdbExportMojo
         
         def things_to_do_to_export_a_path= 
         {
+            if (!it.path) return;
             def path= it.path
             log.debug "path: "+path
             path= xdbSourceDirectory+it.path.replaceAll('/',(File.separator=='\\' ? '\\\\' : '/'))
@@ -112,7 +113,7 @@ public class XdbExportMojo
 
         if (dirPaths)
         {
-           def cnt=2;           
+           def cnt=3;           
            dirPathFilter= '('+dirPaths.split(',').collect{ path -> "under_path(res, '"+basePath+path+"', "+(cnt++)+") = 1"}.join(' or ')+')  '
            
            if (filePaths)
@@ -122,7 +123,7 @@ public class XdbExportMojo
            
         }
         
-        def query= "select path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 1) = 1 and ("+dirPathFilter+filePathFilter+")";
+        def query= "select under_path(res, ${basePath}, 1) up, path(1) path, XDBURIType(any_path).getBlob() content from resource_view where under_path(res, ${basePath}, 2) = 1 and ("+dirPathFilter+filePathFilter+")";
         log.debug query
         sql.eachRow(query,things_to_do_to_export_a_path)
     }

@@ -84,6 +84,8 @@ class IndexHelper extends OraDdlHelper
       
       public create(index)
       {
+          def tbs= System.getProperty("indexTablespace")
+
           def ddl = "create"+(index.'@unique'=='true' ? ' unique' : '')+
                      (index.'@bitmap'=='true' ? ' bitmap' : '')+
                     " index ${oid(index.'@name')} on "+
@@ -91,7 +93,7 @@ class IndexHelper extends OraDdlHelper
                         index.columns.column.
                          collect{ indexPart(it) }.
                          join(',')+
-                        ")"
+                        ")"+(tbs!=null ? " tablespace ${tbs}" : "")
  
           if (index.'@bitmap'=='true')
             ddl= """declare

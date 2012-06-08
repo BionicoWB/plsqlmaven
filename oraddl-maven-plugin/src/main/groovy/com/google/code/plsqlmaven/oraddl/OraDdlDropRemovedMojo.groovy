@@ -54,7 +54,7 @@ public class OraDdlDropRemovedMojo
    
    private parser= new XmlParser();
    
-   private order= ['table','sequence','synonym','view','materialized view','index']
+   private order= ['index','table','sequence','synonym','view','materialized view']
    
    private helpers= [];
    
