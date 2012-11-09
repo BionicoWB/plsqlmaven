@@ -126,6 +126,25 @@ public class PlSqlUtils
                return 'unk'
         }
     }
+
+    public compileSource(String source)
+    { 
+        try
+        {
+            sql.execute source
+        }
+        catch (Exception ex)
+        {
+			if (ex.errorCode!=24344)
+            {
+                def stmt= sql.connection.prepareStatement(source)
+                stmt.escapeProcessing= false
+                stmt.execute()
+            }
+            else
+             throw ex;
+        }
+    }
     
     public compile(File source)
     {
@@ -146,14 +165,14 @@ public class PlSqlUtils
         
 		try
 		{
-                     sql.execute(ddl)
+           compileSource(ddl)
 		}
 		catch (SQLException ex)
 		{
 			// ignore compile errors (we will read user_errors) 
 			if (ex.errorCode!=24344)
 			  throw ex
-        	}
+        }
     }
     
     public compileDirectory(String dirPath)

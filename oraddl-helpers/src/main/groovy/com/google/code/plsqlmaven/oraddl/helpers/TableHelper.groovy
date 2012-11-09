@@ -563,7 +563,7 @@ class TableHelper extends OraDdlHelper
               changes+= column_number_to_varchar2(table,targetCol);
           }
           else
-          if (targetCol.'@type'=='number'&&sourceCol.'@type'=='varchar2')
+          if (targetCol.'@type'=='number'&&sourceCol.'@type' in ['varchar2','char'])
           {
               changes+= column_varchar2_to_number(table,targetCol);
           }
@@ -575,6 +575,10 @@ class TableHelper extends OraDdlHelper
           {
               changes+= column_number_reduce_precision(table,targetCol);
           }
+          else
+          if (targetCol.'@type'=='varchar2'&&sourceCol.'@type'=='varchar2'&&
+              !cmp(sourceCol,targetCol,'length'))
+              changes+= column_varchar2_change_length(table,targetCol);
           else
           {
              def columnType= getColumnType(targetCol)
@@ -731,7 +735,7 @@ class TableHelper extends OraDdlHelper
                                        declare
                                          v_table             varchar2(30):= '${oid(table.'@name',false)}';
                                          v_constraint        varchar2(30);
-                                         v_search_condition  varchar2(32767):= '${constraint.'@expression'}';
+                                         v_search_condition  varchar2(32767):= q'{${constraint.'@expression'}}';
                                        begin
                                          
                                              for c_cur in (select constraint_name,
@@ -1151,6 +1155,84 @@ class TableHelper extends OraDdlHelper
       }
       
       
+      private column_varchar2_change_length(table,column)
+      {
+          def changes= [];
+          def tempIndex= tempColIndex--;
+          def columnType= getColumnType(column);
+          
+          try
+          {
+             changes << [
+                             type: 'drop_maven_temporary_column',
+                         mainType: 'modify_column',
+                        tempIndex: tempIndex,
+                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
+                         failSafe: true
+                        ]
+          }
+          catch (Exception ex)
+          {}
+          
+          changes << [
+                              type: 'add_maven_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} add (mvn_${tempIndex} ${columnType})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          changes << [
+                              type: 'maven_column_change_varchar2_length',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: """declare
+                                          v_value ${columnType};
+                                          
+                                          function change_length(p_old varchar2, p_rowid varchar2)
+                                          return varchar2
+                                          as
+                                             v_value ${columnType};
+                                          begin
+                                          
+                                             v_value:= p_old;
+                                             return v_value;
+                                          
+                                          exception
+                                           when others then
+                                             raise_application_error(-20001,'Found value incompatible with target column length: '||p_old||' at rowid: '||p_rowid);
+                                          end;
+                                     begin
+                                          for c_cur in (select rowid rwid, ${oid(column.'@name')} from ${oid(table.'@name')}) loop
+                                             v_value:= change_length(c_cur.${oid(column.'@name')},c_cur.rwid);
+                                             update ${oid(table.'@name')}
+                                                set mvn_${tempIndex}= v_value
+                                              where rowid= c_cur.rwid;
+                                          end loop;
+                                          commit;
+                                     end;
+                                   """
+                     ]
+          
+          changes << [
+                              type: 'maven_drop_column_after_data_migration',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+
+          changes << [
+                              type: 'maven_rename_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} rename column mvn_${tempIndex} to ${oid(column.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          return changes;
+      }
+	  
       private column_number_reduce_precision(table,column)
       {
           def changes= [];

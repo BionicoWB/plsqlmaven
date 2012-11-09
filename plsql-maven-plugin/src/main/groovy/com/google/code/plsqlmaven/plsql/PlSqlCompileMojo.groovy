@@ -18,6 +18,7 @@ package com.google.code.plsqlmaven.plsql
 
 import groovy.xml.MarkupBuilder
 import java.sql.SQLSyntaxErrorException
+import java.sql.SQLRecoverableException
 
 /**
  * Compile PL/SQL sources.
@@ -50,6 +51,20 @@ public class PlSqlCompileMojo
     * @parameter expression="${native}"
     */
     private boolean nativeComp;
+
+   /**
+    * Ignore PL/SQL errors
+    * @since 1.11
+    * @parameter expression="${ignoreErrors}"
+    */
+    private boolean ignoreErrors;
+
+   /**
+    * Ignore PL/SQL errors
+    * @since 1.11
+    * @parameter expression="${retryTimes}"
+    */
+    private int retryTimes;
 
     /**
      * Location of the touch file.
@@ -114,7 +129,7 @@ public class PlSqlCompileMojo
 			
             disconnectFromDatabase();
 			
-            if (!success)
+            if (!success&&!ignoreErrors)
              fail('PL/SQL errors found.')
     }
 
@@ -167,7 +182,7 @@ public class PlSqlCompileMojo
     	    else
 	        success= true
                 
-            if (!success)
+            if (!success&&!ignoreErrors)
              fail('PL/SQL errors found.')
     }
     
@@ -379,7 +394,37 @@ public class PlSqlCompileMojo
                
 			   try
 			   {
-                   compile(it.file)
+                   try 
+                   { 
+                      compile(it.file) 
+                   } 
+                   catch (SQLRecoverableException srex) 
+                   { 
+                      if (ignoreErrors)
+                      {
+                          def i= (retryTimes ? retryTimes : 1),
+                              rex= null;
+                          
+                          while (i-->0)
+                          try
+                          {
+                              log.error("recoverable error ("+srex.message+") compiling: "+it.file.getAbsolutePath()+", retrying...")
+                              try { disconnectFromDatabase() } catch (Exception ex) {}
+                              
+                              connectToDatabase()   
+                              compile(it.file) 
+                              rex= null;
+                          }
+                          catch (SQLRecoverableException srex1) 
+                          {
+                              rex= srex1; 
+                          }
+
+                          if (rex) throw rex;
+                      }
+                      else
+                          throw srex
+                   }
 			   }
 			   catch (SQLSyntaxErrorException ssex)
 			   {

@@ -65,7 +65,7 @@ public class OraDdlExtractMojo
   /**
    * Include this objects in the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
-   * @since 1.9
+   * @since 1.11
    * @parameter expression="${include}"
    */
    private String include;
@@ -103,6 +103,7 @@ public class OraDdlExtractMojo
        def typeFilter= '';
        def existingFilter= '';
 	   def excludeFilter= '';
+	   def includeFilter= '';
 	   
        if (objects)
          objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
@@ -190,9 +191,9 @@ public class OraDdlExtractMojo
 
    private buildIncludeFilter()
    {
-	   def excludes= exclude.split(',')
+	   def includes= include.split(',')
 	   
-	   return ' and ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
+	   return ' and ('+includes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
    }
 
 }

@@ -145,6 +145,7 @@ public class SchemaUtils
            
            try
            {
+                 log.info change.type
                  sql.execute change.ddl.toString() 
            }
            catch (SQLException ex)

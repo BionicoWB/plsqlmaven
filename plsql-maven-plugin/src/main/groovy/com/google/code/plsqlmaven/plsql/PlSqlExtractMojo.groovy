@@ -57,6 +57,14 @@ public class PlSqlExtractMojo
    private String exclude;
 
   /**
+   * Include this objects in the extraction (comma separated list of 
+   * Oracle regular expressions for REGEXP_LIKE operator) 
+   * @since 1.11
+   * @parameter expression="${include}"
+   */
+   private String include;
+
+  /**
    * Whether to force extraction even if the sources directory already exists
    * @since 1.0
    * @parameter expression="${force}"
@@ -96,6 +104,7 @@ public class PlSqlExtractMojo
         def typeFilter= '';
         def existingFilter= '';
 		def excludeFilter= '';
+		def includeFilter= '';
 		
         if (objects)
             objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
@@ -109,6 +118,9 @@ public class PlSqlExtractMojo
         if (exclude)
             excludeFilter= buildExcludeFilter()
 			
+        if (include)
+            includeFilter= buildIncludeFilter()
+			
   		def objectsQuery="""select object_name,
 								   object_type
 							  from user_objects
@@ -117,7 +129,8 @@ public class PlSqlExtractMojo
 						  typeFilter+
 						  objectsFilter+
 						  existingFilter+
-						  excludeFilter
+						  excludeFilter+
+						  includeFilter
 							  
          log.debug objectsQuery
 							
@@ -153,5 +166,12 @@ public class PlSqlExtractMojo
 		def excludes= exclude.split(',')
 		
         return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
+    }
+
+	private buildIncludeFilter()
+	{
+		def includes= include.split(',')
+		
+        return ' and not ('+includes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
     }
 }
