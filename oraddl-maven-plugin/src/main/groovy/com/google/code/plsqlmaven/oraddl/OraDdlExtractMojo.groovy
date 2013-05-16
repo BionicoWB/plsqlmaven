@@ -70,6 +70,14 @@ public class OraDdlExtractMojo
    */
    private String include;
 
+  /**
+   * Exclude objects that are related to objects excluded
+   * like table indexes if the table is excluded
+   * @since 1.11
+   * @parameter expression="${excludeRelated}"
+   */
+   private boolean excludeRelated;
+
    void execute()
    {
        if (checkSourceDirectory())
@@ -184,9 +192,13 @@ public class OraDdlExtractMojo
 
    private buildExcludeFilter()
    {
-	   def excludes= exclude.split(',')
+	   def excludes= exclude.split(','),
+           related= {
+            it ->
+            excludeRelated ? " or (object_type = 'INDEX' and exists(select 1 from user_indexes where table_name= '${it}' and index_name= object_name))" : ""
+           }
 	   
-	   return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
+	   return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')"+related(it) }.join(' or ')+')'
    }
 
    private buildIncludeFilter()
