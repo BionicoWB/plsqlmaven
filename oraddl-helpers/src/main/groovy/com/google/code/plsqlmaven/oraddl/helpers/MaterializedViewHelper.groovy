@@ -84,7 +84,7 @@ class MaterializedViewHelper extends OraDdlHelper
       {
           return [
                           type: 'drop_mview',
-                           ddl: "drop view ${oid(mview.'@name')}",
+                           ddl: "drop materialized view ${oid(mview.'@name')}",
                    privMessage: "You need to: grant drop materialized view to ${username}"
                  ];
 
