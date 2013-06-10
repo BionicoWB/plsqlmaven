@@ -53,12 +53,13 @@ class TableHelper extends OraDdlHelper
                      def col= it.toRowResult()
                      def p= col.data_type.indexOf('(')
 				 	 def colComment= sql.firstRow("select comments from user_col_comments where table_name = ${name} and column_name= ${col.column_name}")?.comments
-					 
+                     def forcedLengthSemantic= System.getProperty('forceLengthSemantic')
+
                      xml.column('name':          xid(col.column_name),
                                 'type':          col.data_type.toLowerCase().substring(0,(p==-1?col.data_type.length():p)),
                                 'precision':     col.data_precision,
                                 'scale':         col.data_scale,
-                                'length':        rd(col.char_length+(col.char_used==null ? 0 : ' '+(col.char_used=='B' ? 'byte' : 'char')),0),
+                                'length':        rd(col.char_length+(forcedLengthSemantic ? ' '+forcedLengthSemantic : (col.char_used==null ? 0 : ' '+(col.char_used=='B' ? 'byte' : 'char'))),0),
                                 'default':       (col.data_default?.trim()?.toLowerCase()=='null' ? null : col.data_default?.trim()),
                                 'primary':       simpleKey(col.column_name,constraints, 'P'),
                                 'unique':        simpleKey(col.column_name,constraints, 'U'),
