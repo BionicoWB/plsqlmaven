@@ -59,7 +59,7 @@ class TableHelper extends OraDdlHelper
                                 'type':          col.data_type.toLowerCase().substring(0,(p==-1?col.data_type.length():p)),
                                 'precision':     col.data_precision,
                                 'scale':         col.data_scale,
-                                'length':        rd(col.char_length+(forcedLengthSemantic ? ' '+forcedLengthSemantic : (col.char_used==null ? 0 : ' '+(col.char_used=='B' ? 'byte' : 'char'))),0),
+                                'length':        rd(col.char_length+(col.char_length ? (forcedLengthSemantic ? ' '+forcedLengthSemantic : (col.char_used==null ? 0 : ' '+(col.char_used=='B' ? 'byte' : 'char'))) : ''),0),
                                 'default':       (col.data_default?.trim()?.toLowerCase()=='null' ? null : col.data_default?.trim()),
                                 'primary':       simpleKey(col.column_name,constraints, 'P'),
                                 'unique':        simpleKey(col.column_name,constraints, 'U'),
