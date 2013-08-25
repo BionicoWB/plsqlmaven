@@ -36,7 +36,7 @@
     <dependency>
       <groupId>com.google.code.plsqlgateway</groupId>
       <artifactId>plsqlgateway-core</artifactId>
-      <version>1.11</version>
+      <version>1.12</version>
     </dependency>
     <dependency>
     	<groupId>log4j</groupId>
