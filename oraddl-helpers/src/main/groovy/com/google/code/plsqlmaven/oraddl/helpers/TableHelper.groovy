@@ -554,6 +554,11 @@ class TableHelper extends OraDdlHelper
       {
           def changes= []
           
+          if (targetCol.'@type'=='clob'&&sourceCol.'@type'=='varchar2')
+          {
+              changes+= column_varchar2_to_clob(table,targetCol);
+          }
+          else
           if (targetCol.'@type'=='varchar2'&&sourceCol.'@type'=='clob')
           {
               changes+= column_clob_to_varchar2(table,targetCol);
