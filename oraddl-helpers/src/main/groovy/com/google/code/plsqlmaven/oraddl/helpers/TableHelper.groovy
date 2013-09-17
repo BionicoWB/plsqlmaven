@@ -950,8 +950,6 @@ class TableHelper extends OraDdlHelper
                        privMessage: "You need to: grant alter table to ${username}"
                      ]
           
-          def target_length= column.'@length'.split(' ')[0];
-
           changes << [
                               type: 'maven_translate_values_varchar2_to_clob',
                           mainType: 'modify_column',
