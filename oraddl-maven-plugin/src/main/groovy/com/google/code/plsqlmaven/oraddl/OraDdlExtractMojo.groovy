@@ -195,7 +195,7 @@ public class OraDdlExtractMojo
 	   def excludes= exclude.split(','),
            related= {
             it ->
-            excludeRelated ? " or (object_type = 'INDEX' and exists(select 1 from user_indexes where table_name= '${it}' and index_name= object_name))" : ""
+            excludeRelated ? " or (object_type = 'INDEX' and exists(select 1 from user_indexes where regexp_like(table_name,'${it}') and index_name= object_name))" : ""
            }
 	   
 	   return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')"+related(it) }.join(' or ')+')'
