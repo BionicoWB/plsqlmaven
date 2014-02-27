@@ -569,6 +569,11 @@ class TableHelper extends OraDdlHelper
               changes+= column_number_to_varchar2(table,targetCol);
           }
           else
+          if (targetCol.'@type'=='char'&&sourceCol.'@type'=='number')
+          {
+              changes+= column_number_to_char(table,targetCol);
+          }
+          else
           if (targetCol.'@type'=='number'&&sourceCol.'@type' in ['varchar2','char'])
           {
               changes+= column_varchar2_to_number(table,targetCol);
@@ -1128,6 +1133,86 @@ class TableHelper extends OraDdlHelper
       }
       
       
+      private column_number_to_char(table,column)
+      {
+          def changes= [];
+          def tempIndex= tempColIndex--;
+          def columnType= getColumnType(column);
+          
+          try
+          {
+             changes << [
+                             type: 'drop_maven_temporary_column',
+                         mainType: 'modify_column',
+                        tempIndex: tempIndex,
+                              ddl: "alter table ${oid(table.'@name')} drop column mvn_${tempIndex}",
+                         failSafe: true
+                        ]
+          }
+          catch (Exception ex)
+          {}
+          
+          changes << [
+                              type: 'add_maven_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} add (mvn_${tempIndex} ${columnType})",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          def target_length= column.'@length'.split(' ')[0];
+
+          changes << [
+                              type: 'maven_translate_values_number_to_char',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: """declare
+                                          v_value ${columnType};
+                                          
+                                          function to_char_(p_old number, p_length number, p_rowid varchar2)
+                                          return varchar2
+                                          as 
+                                             v_value varchar2(2000):= to_char(p_old);
+                                          begin
+                                          
+                                             if length(v_value) > p_length then
+                                               raise_application_error(-20001,'Found a value longer than target column length: '||v_value||' at rowid: '||p_rowid);
+                                             end if;
+                                             
+                                             return v_value;
+                                             
+                                          end;
+                                     begin
+                                          for c_cur in (select rowid rwid, ${oid(column.'@name')} from ${oid(table.'@name')}) loop
+                                             v_value:= to_char_(c_cur.${oid(column.'@name')},${target_length},c_cur.rwid);
+                                             update ${oid(table.'@name')}
+                                                set mvn_${tempIndex}= v_value
+                                              where rowid= c_cur.rwid;
+                                          end loop;
+                                          commit;
+                                     end;
+                                   """
+                     ]
+          
+          changes << [
+                              type: 'maven_drop_column_after_data_migration',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} drop column ${oid(column.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+
+          changes << [
+                              type: 'maven_rename_temporary_column',
+                          mainType: 'modify_column',
+                         tempIndex: tempIndex,
+                               ddl: "alter table ${oid(table.'@name')} rename column mvn_${tempIndex} to ${oid(column.'@name')}",
+                       privMessage: "You need to: grant alter table to ${username}"
+                     ]
+          
+          return changes;
+      }
+      
       private column_number_to_varchar2(table,column)
       {
           def changes= [];
@@ -1171,7 +1256,7 @@ class TableHelper extends OraDdlHelper
                                           begin
                                           
                                              if length(v_value) > p_length then
-                                               raise_application_error(-20001,'Found a value longer than target column length: '||to_char(v_value)||' at rowid: '||p_rowid);
+                                               raise_application_error(-20001,'Found a value longer than target column length: '||v_value||' at rowid: '||p_rowid);
                                              end if;
                                              
                                              return v_value;
