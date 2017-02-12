@@ -34,35 +34,35 @@ public class PlSqlCompileMojo
    /**
     * The specific source file to compile
     * @since 1.0
-    * @parameter expression="${plsqlSource}"
+    * @parameter property="plsqlSource"
     */
    private String plsqlSource;
 
    /**
    * Whether to loop waiting for changes, expressend in seconds between loops
    * @since 1.9
-   * @parameter expression="${loop}"
+   * @parameter property="loop"
    */
     private int loop;
 
    /**
     * Whether to compile code natively in C or not
     * @since 1.10
-    * @parameter expression="${native}"
+    * @parameter property="native"
     */
     private boolean nativeComp;
 
    /**
     * Ignore PL/SQL errors
     * @since 1.11
-    * @parameter expression="${ignoreErrors}"
+    * @parameter property="ignoreErrors"
     */
     private boolean ignoreErrors;
 
    /**
     * Ignore PL/SQL errors
     * @since 1.11
-    * @parameter expression="${retryTimes}"
+    * @parameter property="retryTimes"
     */
     private int retryTimes;
 

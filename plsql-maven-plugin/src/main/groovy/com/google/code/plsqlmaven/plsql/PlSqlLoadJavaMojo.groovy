@@ -34,42 +34,42 @@ extends PlSqlMojo
     * Whether to skip loading of classes (you now you have already loaded all off
     * them in the create$java$lob$table table)
     * @since 1.11
-    * @parameter expression="${skipLoad}"
+    * @parameter property="skipLoad"
     */
     private boolean skipLoad;
 
    /**
     * Whether to skip classes creation (you now you have already created all off them)
     * @since 1.11
-    * @parameter expression="${skipCreate}"
+    * @parameter property="skipCreate"
     */
     private boolean skipCreate;
 
    /**
     * Whether to skip classes resolution (you want them to be resolved later or at runtime)
     * @since 1.11
-    * @parameter expression="${skipResolve}"
+    * @parameter property="skipResolve"
     */
     private boolean skipResolve;
 
    /**
     * Whether to skip classes and load resources only
     * @since 1.11
-    * @parameter expression="${skipClasses}"
+    * @parameter property="skipClasses"
     */
     private boolean skipClasses;
 
    /**
     * Whether to skip dependencies and load,compile,resolve project things only
     * @since 1.11
-    * @parameter expression="${skipDependencies}"
+    * @parameter property="skipDependencies"
     */
     private boolean skipDependencies;
 
    /**
     * Whether to skip resources and load classes only
     * @since 1.11
-    * @parameter expression="${skipResources}"
+    * @parameter property="skipResources"
     */
     private boolean skipResources;
 

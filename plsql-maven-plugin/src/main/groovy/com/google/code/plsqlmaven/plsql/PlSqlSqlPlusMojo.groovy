@@ -33,7 +33,7 @@ public class PlSqlSqlPlusMojo
    /**
     * Whether to include dependencies in the script or not
     * @since 1.0
-    * @parameter expression="${dependencies}"
+    * @parameter property="dependencies"
     */
     private boolean dependencies;
 

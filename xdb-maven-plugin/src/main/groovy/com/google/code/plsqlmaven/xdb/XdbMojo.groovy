@@ -31,26 +31,26 @@ public abstract class XdbMojo
     /**
     * Database username.
     * @since 1.0
-    * @parameter expression="${username}"
+    * @parameter property="username"
     */
    protected String username;
 
    /**
     * Database password.
     * @since 1.0
-    * @parameter expression="${password}"
+    * @parameter property="password"
     */
    protected String password;
 
    /**
     * Database URL.
-    * @parameter expression="${url}"
+    * @parameter property="url"
     * @since 1.0
     */
    protected String url;
 
    /**
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
@@ -59,7 +59,7 @@ public abstract class XdbMojo
    /**
     * The base path from witch the export should start
     * @since 1.0
-    * @parameter expression="${basePath}"
+    * @parameter property="basePath"
     * @required
     */
    protected String basePath;
@@ -68,7 +68,7 @@ public abstract class XdbMojo
     * A list of comma separated file extensions to 
     * enable html entity translation 
     * @since 1.0
-    * @parameter expression="${translateEntities}"
+    * @parameter property="translateEntities"
     */
    protected String translateEntities;
 

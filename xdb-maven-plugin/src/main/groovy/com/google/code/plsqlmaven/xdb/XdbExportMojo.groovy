@@ -32,7 +32,7 @@ public class XdbExportMojo
    /**
     * A comma separated list of xdb paths relative to the basePath to export
     * @since 1.0
-    * @parameter expression="${filePaths}"
+    * @parameter property="filePaths"
     */
    private String filePaths;
 
@@ -40,14 +40,14 @@ public class XdbExportMojo
     * A comma separated list of xdb directory paths relative to the basePath to export
     * use instead of filePaths to export entire subdirectories
     * @since 1.0
-    * @parameter expression="${dirPaths}"
+    * @parameter property="dirPaths"
     */
    private String dirPaths;
 
   /**
    * Whether to force export even if the local file exists
    * @since 1.0
-   * @parameter expression="${force}"
+   * @parameter property="force"
    */
    private boolean force;
    

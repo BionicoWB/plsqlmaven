@@ -31,14 +31,14 @@ public class XdbImportMojo
   /**
    * Whether to import only files changed from last import
    * @since 1.0
-   * @parameter expression="${changedOnly}"
+   * @parameter property="changedOnly"
    */
     private boolean changedOnly;
     
   /**
    * Whether to loop waiting for changes, expressend in seconds between loops
    * @since 1.9
-   * @parameter expression="${loop}"
+   * @parameter property="loop"
    */
     private int loop;
 

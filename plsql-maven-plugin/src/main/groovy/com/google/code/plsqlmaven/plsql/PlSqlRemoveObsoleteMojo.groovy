@@ -30,7 +30,7 @@ public class PlSqlRemoveObsoleteMojo
    /**
 	* Do delete files
 	* @since 1.9
-	* @parameter expression="${force}"
+	* @parameter property="force"
 	*/
 	private boolean force;
  

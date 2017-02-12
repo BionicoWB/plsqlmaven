@@ -29,28 +29,28 @@ public class OraDdlExtractMojo
    /**
     * A comma separated list of object names to extract
     * @since 1.0
-    * @parameter expression="${objects}"
+    * @parameter property="objects"
     */
    private String objects;
 
    /**
     * A comma separated list of types (table,sequence... etc) of objects to extract
     * @since 1.8
-    * @parameter expression="${types}"
+    * @parameter property="types"
     */
    private String types;
 
   /**
    * Whether to force extraction even if the sources directory already exists
    * @since 1.0
-   * @parameter expression="${force}"
+   * @parameter property="force"
    */
    private boolean force;
 
   /**
    * Whether to extract objects already in the project 
    * @since 1.8
-   * @parameter expression="${existing}"
+   * @parameter property=existing}"
    */
    private boolean existing;
 
@@ -58,7 +58,7 @@ public class OraDdlExtractMojo
    * Exclude this objects from the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
    * @since 1.9
-   * @parameter expression="${exclude}"
+   * @parameter property=exclude}"
    */
    private String exclude;
 
@@ -66,7 +66,7 @@ public class OraDdlExtractMojo
    * Include this objects in the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
    * @since 1.11
-   * @parameter expression="${include}"
+   * @parameter property=include}"
    */
    private String include;
 
@@ -74,7 +74,7 @@ public class OraDdlExtractMojo
    * Exclude objects that are related to objects excluded
    * like table indexes if the table is excluded
    * @since 1.11
-   * @parameter expression="${excludeRelated}"
+   * @parameter property=excludeRelated}"
    */
    private boolean excludeRelated;
 

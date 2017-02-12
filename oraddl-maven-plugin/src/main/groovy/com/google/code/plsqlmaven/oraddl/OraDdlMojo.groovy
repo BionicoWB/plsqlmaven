@@ -31,26 +31,26 @@ public abstract class OraDdlMojo
     /**
      * Database username.
      * @since 1.0
-     * @parameter expression="${username}"
+     * @parameter property=username}"
      */
     protected String username;
 
     /**
      * Database password.
      * @since 1.0
-     * @parameter expression="${password}"
+     * @parameter property=password}"
      */
     protected String password;
 
     /**
      * Database URL.
-     * @parameter expression="${url}"
+     * @parameter property=url}"
      * @since 1.0
      */
     protected String url;
 
     /**
-    * @parameter expression="${project}"
+    * @parameter property=project}"
     * @required
     * @readonly
     */

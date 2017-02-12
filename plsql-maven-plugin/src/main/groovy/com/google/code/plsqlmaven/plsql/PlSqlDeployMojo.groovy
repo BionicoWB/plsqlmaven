@@ -29,7 +29,7 @@ extends PlSqlMojo
    /**
     * path to the jar to deploy
     * @since 1.0
-    * @parameter expression="${jarPath}"
+    * @parameter property="jarPath"
     * @required
     */
    private String jarPath;

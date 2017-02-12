@@ -30,21 +30,21 @@ public class PlSqlExtractMojo
    /**
     * A comma separated list of object names to extract
     * @since 1.0
-    * @parameter expression="${objects}"
+    * @parameter property="objects"
     */
    private String objects;
 
   /**
    * A comma separated list of types (package,procedure... etc) of objects to extract
    * @since 1.8
-   * @parameter expression="${types}"
+   * @parameter property="types"
    */
    private String types;
 
   /**
    * Whether to extract objects already in the project
    * @since 1.8
-   * @parameter expression="${existing}"
+   * @parameter property="existing"
    */
    private boolean existing;
 
@@ -52,7 +52,7 @@ public class PlSqlExtractMojo
    * Exclude this objects from the extraction (comma separated list of 
    * Oracle regular expressions for REGEXP_LIKE operator) 
    * @since 1.9
-   * @parameter expression="${exclude}"
+   * @parameter property="exclude"
    */
    private String exclude;
 
@@ -60,14 +60,14 @@ public class PlSqlExtractMojo
    * Include this objects in the extraction (comma separated list of 
    * Oracle regular expressions for REGEXP_LIKE operator) 
    * @since 1.11
-   * @parameter expression="${include}"
+   * @parameter property="include"
    */
    private String include;
 
   /**
    * Whether to force extraction even if the sources directory already exists
    * @since 1.0
-   * @parameter expression="${force}"
+   * @parameter property="force"
    */
    private boolean force;
 

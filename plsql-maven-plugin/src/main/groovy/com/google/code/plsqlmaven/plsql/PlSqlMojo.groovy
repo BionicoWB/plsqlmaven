@@ -32,20 +32,20 @@ public abstract class PlSqlMojo
     /**
      * Database username. 
      * @since 1.0
-     * @parameter expression="${username}"
+     * @parameter property="username"
      */
     protected String username;
 
     /**
      * Database password.
      * @since 1.0
-     * @parameter expression="${password}"
+     * @parameter property="password"
      */
     protected String password;
 
     /**
      * Database URL.
-     * @parameter expression="${url}"
+     * @parameter property="url"
      * @since 1.0
      */
     protected String url;
@@ -58,7 +58,7 @@ public abstract class PlSqlMojo
     protected String defaultPage;
 
    /**
-    * @parameter expression="${project}"
+    * @parameter property="project"
     * @required
     * @readonly
     */
@@ -67,21 +67,21 @@ public abstract class PlSqlMojo
    /**
    * Whether to use DROP TYPE mytype FORCE before type spec compilation
    * @since 1.10
-   * @parameter expression="${dropForceTypes}"
+   * @parameter property="dropForceTypes"
    */
     protected boolean dropForceTypes;
     
    /**
    * Whether to use CREATE FORCE VIEW
    * @since 1.11
-   * @parameter expression="${createForceViews}"
+   * @parameter property="createForceViews"
    */
     protected boolean createForceViews;
     
    /**
     * Specify source directory
     * @since 1.11
-    * @parameter expression="${sourceDir}"
+    * @parameter property="sourceDir"
     */
     private String sourceDir;
 

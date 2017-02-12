@@ -30,7 +30,7 @@ public class PlsqlExtractRemainingMojo
 
    /**
 	* A comma separated list of types (package,function... etc) of objects to extract
-	* @parameter expression="${types}"
+	* @parameter property="types"
 	*/
    private String types;
    
@@ -38,7 +38,7 @@ public class PlsqlExtractRemainingMojo
    * Exclude this objects from the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
    * @since 1.9
-   * @parameter expression="${exclude}"
+   * @parameter property="exclude"
    */
    private String exclude;
 

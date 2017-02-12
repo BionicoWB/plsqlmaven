@@ -31,14 +31,14 @@ public class OraDdlSyncMojo
   /**
    * Sync only changed (from last sync) schema files
    * @since 1.0
-   * @parameter expression="${changedOnly}"
+   * @parameter property="changedOnly"
    */
    private boolean changedOnly;
 
   /**
    * Detect changes but don't apply it
    * @since 1.0
-   * @parameter expression="${detectOnly}"
+   * @parameter property="detectOnly"
    */
    private boolean detectOnly;
 

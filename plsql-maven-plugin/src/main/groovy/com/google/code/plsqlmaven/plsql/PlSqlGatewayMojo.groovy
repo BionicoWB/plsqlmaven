@@ -49,28 +49,28 @@ public class PlSqlGatewayMojo
    /**
     * Address to bind
     * @since 1.0
-    * @parameter expression="${bindAddress}"
+    * @parameter property="bindAddress"
     */
    private String bindAddress= '127.0.0.1';
 
    /**
     * Port to listen
     * @since 1.0
-    * @parameter expression="${port}"
+    * @parameter property="port"
     */
    private int port= 8080;
 
    /**
     * WebApp root directory
     * @since 1.0
-    * @parameter expression="${webappRoot}"
+    * @parameter property="webappRoot"
     */
    private String webappRoot
 
    /**
     * WebApp context path
     * @since 1.0
-    * @parameter expression="${webappContext}"
+    * @parameter property="webappContext"
     */
    private String webappContext
 

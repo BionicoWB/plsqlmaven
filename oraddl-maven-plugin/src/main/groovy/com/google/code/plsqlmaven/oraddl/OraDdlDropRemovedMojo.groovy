@@ -38,7 +38,7 @@ public class OraDdlDropRemovedMojo
     * Maven project (directory) to compare with the current project
     * @since 1.9
     * @required
-    * @parameter expression="${to}"
+    * @parameter property="to"
     */
    protected String to;
 

@@ -29,7 +29,7 @@ public class PlSqlTemplateMojo
    /**
     * Type of the object to be created (eg function,procedure,package)
     * @since 1.0
-    * @parameter expression="${type}"
+    * @parameter property="type"
     * @required
     */
    private String type;
@@ -37,7 +37,7 @@ public class PlSqlTemplateMojo
    /**
     * Name of the object to be created (eg myprc)
     * @since 1.0
-    * @parameter expression="${name}"
+    * @parameter property="name"
     * @required
     */
    private String name;
