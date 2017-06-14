@@ -17,7 +17,7 @@ package com.google.code.plsqlmaven.oraddl
  */
 
 /**
- * Remove files of objects that cannot be found 
+ * Remove files of objects that cannot be found
  * on the current connected schema
  *
  * @goal remove-obsolete
@@ -30,10 +30,10 @@ public class OraDdlRemoveObsoleteMojo
    /**
 	* Do delete files
 	* @since 1.9
-	* @parameter property=force}"
+	* @parameter property="force"
 	*/
 	private boolean force;
- 
+
    void execute()
    {
        if (!connectToDatabase())
@@ -41,12 +41,12 @@ public class OraDdlRemoveObsoleteMojo
          fail('Need an Oracle connection')
          return
        }
-       
+
        removeObsolete()
 
 	   disconnectFromDatabase()
    }
-   
+
    private removeObsolete()
    {
        def scanner=  ant.fileScanner
@@ -58,12 +58,12 @@ public class OraDdlRemoveObsoleteMojo
        }
 
 	   def parser= new XmlParser()
-       
+
        for (file in scanner)
        {
            def object= getSourceDescriptor(file)
 		   def helper= schemaUtils.getHelper(object.type)
-		   
+
 		   try
 		   {
    		      def xml= parser.parse(file)
@@ -73,13 +73,13 @@ public class OraDdlRemoveObsoleteMojo
 		   {
 			   object= ['name': object.name, 'type': object.type]
 		   }
-		   
+
 		   if (!(sql.firstRow("select 1 object_exists from user_objects where object_type= '${object.type.toUpperCase()}' and object_name= '${oid(object.name,false)}'".toString())?.object_exists))
 		     if (force)
 		       ant.delete(file: file.absolutePath)
 			 else
 			   log.info "file: ${file.absolutePath} will be deleted with -Dforce"
-           
+
        }
    }
 }

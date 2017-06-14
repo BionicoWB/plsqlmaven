@@ -48,9 +48,9 @@ public class OraDdlExtractMojo
    private boolean force;
 
   /**
-   * Whether to extract objects already in the project 
+   * Whether to extract objects already in the project
    * @since 1.8
-   * @parameter property=existing}"
+   * @parameter property="existing"
    */
    private boolean existing;
 
@@ -58,7 +58,7 @@ public class OraDdlExtractMojo
    * Exclude this objects from the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
    * @since 1.9
-   * @parameter property=exclude}"
+   * @parameter property="exclude"
    */
    private String exclude;
 
@@ -66,7 +66,7 @@ public class OraDdlExtractMojo
    * Include this objects in the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
    * @since 1.11
-   * @parameter property=include}"
+   * @parameter property="include"
    */
    private String include;
 
@@ -87,21 +87,21 @@ public class OraDdlExtractMojo
              fail('Need an Oracle connection')
              return
            }
-             
+
            createSources()
            disconnectFromDatabase()
        }
    }
-   
+
    private checkSourceDirectory()
    {
        def continueExtraction= (force||!new File(sourceDirectory).exists())
-       
+
        if (continueExtraction)
          ant.mkdir(dir: sourceDirectory)
        else
          fail('BE CAREFUL: The source directory exists... Remove it to regenerate schema files')
-         
+
        return (continueExtraction);
    }
 
@@ -112,26 +112,26 @@ public class OraDdlExtractMojo
        def existingFilter= '';
 	   def excludeFilter= '';
 	   def includeFilter= '';
-	   
+
        if (objects)
          objectsFilter= " and object_name in ('"+objects.split(',').collect({ it.toUpperCase() }).join("','")+"')"
 
        if (types)
          typeFilter= " and object_type in ('"+types.split(',').collect({ it.toUpperCase() }).join("','")+"')"
-         
+
        if (existing)
          existingFilter= buildExistingFilter()
 
        if (exclude)
          excludeFilter= buildExcludeFilter()
-		 
+
        if (include)
          includeFilter= buildIncludeFilter()
-		 
-       def objectsQuery="""select object_name, 
+
+       def objectsQuery="""select object_name,
                                   object_type
                              from user_objects a
-                            where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW','MATERIALIZED VIEW') 
+                            where object_type in ('SEQUENCE','TABLE','INDEX','SYNONYM','VIEW','MATERIALIZED VIEW')
                               and not (object_type = 'TABLE' and exists(select 1 from user_snapshots where table_name= a.object_name and prebuilt= 'NO'))
                               and object_name not like 'SYS\\_%' escape '\\'"""+
 						typeFilter+
@@ -139,20 +139,20 @@ public class OraDdlExtractMojo
 						existingFilter+
 						excludeFilter+
 						includeFilter
-                              
-       log.debug objectsQuery 
-	                                    
+
+       log.debug objectsQuery
+
        sql.eachRow(objectsQuery)
        {
 		   def file= schemaUtils.extractFile(sourceDirectory,
 			                                 it.object_type,
 											it.object_name)
-		   
+
 		   if (file)
 		     log.info "extracted ${file.absolutePath}"
        }
    }
-   
+
    public String buildExistingFilter()
    {
        def scanner=  ant.fileScanner
@@ -165,13 +165,13 @@ public class OraDdlExtractMojo
 
        def objects= []
 	   def parser= new XmlParser()
-       
+
        for (file in scanner)
        {
            def path= file.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
            def type= path[path.length-2].replaceAll('_',' ')
            def name= path[path.length-1].split('\\.')[0]
-		   
+
 		   try
 		   {
    		      def xml= parser.parse(file)
@@ -182,7 +182,7 @@ public class OraDdlExtractMojo
 			   objects << ['name': name, 'type': type]
 		   }
        }
-       
+
        if (objects.size()>0)
          return ' and ('+objects.collect{ object -> "(object_name= '${oid(object.name,false)}' and object_type= '${object.type.toUpperCase()}')" }.join(' or ')+')'
        else
@@ -197,14 +197,14 @@ public class OraDdlExtractMojo
             it ->
             excludeRelated ? " or (object_type = 'INDEX' and exists(select 1 from user_indexes where regexp_like(table_name,'${it}') and index_name= object_name))" : ""
            }
-	   
+
 	   return ' and not ('+excludes.collect{ "regexp_like(object_name,'${it}')"+related(it) }.join(' or ')+')'
    }
 
    private buildIncludeFilter()
    {
 	   def includes= include.split(',')
-	   
+
 	   return ' and ('+includes.collect{ "regexp_like(object_name,'${it}')" }.join(' or ')+')'
    }
 

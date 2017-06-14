@@ -31,41 +31,41 @@ public abstract class OraDdlMojo
     /**
      * Database username.
      * @since 1.0
-     * @parameter property=username}"
+     * @parameter property="username"
      */
     protected String username;
 
     /**
      * Database password.
      * @since 1.0
-     * @parameter property=password}"
+     * @parameter property="password"
      */
     protected String password;
 
     /**
      * Database URL.
-     * @parameter property=url}"
+     * @parameter property="url"
      * @since 1.0
      */
     protected String url;
 
     /**
-    * @parameter property=project}"
+    * @parameter property="project"
     * @required
     * @readonly
     */
     protected org.apache.maven.project.MavenProject project
-   
+
     /**
      * Database connection helper
      */
     protected Sql sql
-    
+
     /**
      * Utilities for schema handling
      */
     private SchemaUtils schemaUtils
-    
+
     public void disconnectFromDatabase()
     {
         if (sql)
@@ -76,16 +76,16 @@ public abstract class OraDdlMojo
     {
         if (url)
         {
-            log.debug "connecting to " + url 
+            log.debug "connecting to " + url
             sql = Sql.newInstance(url, username, password, "oracle.jdbc.driver.OracleDriver")
             getSchemaUtils().setSql(sql);
         }
         else
             sql= null;
-            
+
         return (sql!=null);
     }
-    
+
    /**
     * Source directory for schema files src/main/schema
     */
@@ -93,7 +93,7 @@ public abstract class OraDdlMojo
     {
        return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema";
     }
-    
+
     public getSchemaSourceFiles()
     {
         return getSchemaUtils().getSchemaSourceFiles(sourceDirectory)
@@ -108,42 +108,42 @@ public abstract class OraDdlMojo
     {
         return p.replace('/',File.separator)
     }
-    
+
     private val(v,d)
     {
        return (v==d ? null : v);
     }
-    
+
     public SchemaUtils getSchemaUtils()
     {
         if (!schemaUtils)
          schemaUtils= new SchemaUtils(ant,log);
-         
+
         return schemaUtils;
     }
-	
+
 	public oid(xmlIdentifier,quote=true)
 	{
 		return getSchemaUtils().getHelper('table').oid(xmlIdentifier,quote)
 	}
-	
+
 	public xid(oracleIdentifier)
 	{
 		return getSchemaUtils().getHelper('table').xid(oracleIdentifier)
 	}
-	
+
 	public mlc(multiLineText)
 	{
 		def np= multiLineText.indexOf("\n")
 		def initial= '';
-		
+
 		while (multiLineText[np++]==' '){ initial+= ' ' }
-		
+
 		return multiLineText.replaceAll('^'+initial,'')
 	}
 
     public String path2(String... dirs)
     {
         return dirs.findAll{ it }.join(File.separator) //thanks groovy
-    } 
+    }
 }
