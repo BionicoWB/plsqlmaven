@@ -34,13 +34,13 @@ public class SchemaUtils
     private log;
     private Sql sql;
     private String username;
-    
+
    /**
     * Type specific helpers
     */
     private helpers= [:];
 
-    
+
     public SchemaUtils(ant,log,sql)
     {
         this.ant= ant;
@@ -48,13 +48,13 @@ public class SchemaUtils
         this.log= log;
         this.username= sql.firstRow("select user from dual").user
     }
-    
+
     public SchemaUtils(ant,log)
     {
         this.ant= ant;
         this.log= log;
     }
-    
+
     public void setSql(sql)
     {
         this.sql= sql;
@@ -75,7 +75,7 @@ public class SchemaUtils
        }
 
        def objects= [:]
-       
+
        for (file in scanner)
        {
            def path= file.absolutePath.split(File.separator)
@@ -88,31 +88,45 @@ public class SchemaUtils
        sync(objects)
 
     }
-    
-    public boolean sync(objects)
+
+    public boolean sync(objects, detectOnly, destDir)
     {
        def order= ['table','index','sequence','synonym','view','materialized view']
        def parser= new XmlParser()
        def success= true
        def changes= []
        def helpers= []
-       
+        def target_dir
+        def target_file
+
+        if(destDir)
+        {
+            log.info "writing sync.sql file under \"" + destDir + "\""
+            target_dir = new File(destDir)
+            if (!target_dir.exists())
+            {
+                target_dir.mkdir()
+            }
+            target_file = new File(destDir, "sync.sql")
+            ant.truncate(file: target_file)
+        }
+
        order.each
        {
            type ->
-           
+
            def helper= getHelper(type)
            helpers << helper
-           
+
            objects[type].each
            {
                object ->
-               
+
                try
                {
                        log.info "sync ${type} ${object.name}"
                        def target= parser.parseText(object.file.getText().replace('\r',''))
-                       
+
                        if (!helper.exists(target))
                           changes+= ensureList(helper.create(target))
                        else
@@ -126,28 +140,37 @@ public class SchemaUtils
                    log.error ex.message
                    success= false
                }
-               
+
            }
        }
-       
+
        helpers.each
        {
            helper ->
-           
+
            changes= helper.reorder(changes)
        }
-       
+
        changes.each
        {
            change ->
-           
+
            log.debug change.toString()
-           
+
            try
-           {
-                 log.info change.type
-                 sql.execute change.ddl.toString() 
-           }
+            {
+                log.info change.type
+
+                if(target_file)
+                {
+                    target_file << change.ddl.toString() + "\n/\n"
+                }
+
+                if(!detectOnly)
+                {
+                    sql.execute change.ddl.toString()
+                }
+            }
            catch (SQLException ex)
            {
                if (!change.failSafe)
@@ -157,10 +180,10 @@ public class SchemaUtils
                }
            }
        }
-       
+
        return success
     }
-    
+
     public extractXml(parser,helper,name)
     {
         StringWriter writer= new StringWriter()
@@ -168,13 +191,13 @@ public class SchemaUtils
         def xml = new MarkupBuilder(writer)
         xml.omitNullAttributes = true
         xml.doubleQuotes = true
- 
+
         if (!helper.extract(helper.oid(name,false),xml))
           return null
         else
           return parser.parseText(writer.toString())
     }
-    
+
     public extractFile(targetDir,type,name)
     {
 		def ltype= type.toLowerCase();
@@ -188,7 +211,7 @@ public class SchemaUtils
 		def xml = new MarkupBuilder(writer)
 		xml.omitNullAttributes = true
 		xml.doubleQuotes = true
- 
+
 		if (!getHelper(ltype)?.extract(name,xml))
 		{
 		  writer.close()
@@ -201,11 +224,11 @@ public class SchemaUtils
 		  return file
 		}
     }
-	
+
     public getHelper(type)
     {
         def helper;
-        
+
         if (!(helper=helpers[type]))
         {
             try
@@ -218,7 +241,7 @@ public class SchemaUtils
             catch (ClassNotFoundException e)
             { /* ignore */ }
         }
-        
+
         return helper;
     }
 
@@ -226,16 +249,16 @@ public class SchemaUtils
     {
         if (log.debugEnabled)
           changes.each{ log.debug it.toString() }
- 
+
         if (!detectOnly)
             changes.each
             {
                 change ->
-                
+
                 helper."${change.type}"(change);
             }
     }
- 
+
     public static getSourceDescriptor(File source)
     {
         def path= source.absolutePath.split((File.separator=='\\' ? '\\\\' : '/'))
@@ -243,10 +266,10 @@ public class SchemaUtils
         def name= path[path.length-1].split('\\.')[0]
         return ['name': name, 'type': type, 'file': source]
     }
-    
+
     public getSchemaSourceFiles(dir)
     {
-        
+
         if (!new File(dir).exists())
          return [];
 
@@ -257,15 +280,15 @@ public class SchemaUtils
                include(name: '**/*.xml')
            }
         }
-         
+
         def files= []
-        
+
         for (file in scanner)
            files << file
-           
+
         return files;
     }
-    
+
     private ensureList(o)
     {
         if (o instanceof List)
@@ -273,13 +296,13 @@ public class SchemaUtils
         else
           return [o];
     }
-    
+
 	public String path(p)
 	{
 		return p.replace('/',File.separator)
 	}
 
-   private initcap(str) 
+   private initcap(str)
    {
 	char[] name = str.toCharArray()
 	if (name.length == 0)

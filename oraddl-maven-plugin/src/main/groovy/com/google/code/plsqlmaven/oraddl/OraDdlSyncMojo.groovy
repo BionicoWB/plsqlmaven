@@ -51,7 +51,23 @@ public class OraDdlSyncMojo
    * Last sync time.
    */
    private lastSyncTime= 0L;
-   
+
+   /**
+    * Specify destination directory for synchronization's script
+    * @default src/main/schema
+    * @since 1.12
+    * @parameter property="destDir"
+    */
+    private String destDir = "src/main/schema";
+
+    /**
+     * A comma separated list of types of objects to sync
+     * @default table,index,sequence,synonym,view,materialized view
+     * @since 1.12
+     * @parameter property="types"
+     */
+     private String types= "table,index,sequence,synonym,view,materialized view";
+
 
    void execute()
    {
@@ -60,15 +76,17 @@ public class OraDdlSyncMojo
          fail('Need an Oracle connection')
          return
        }
-       
-       getLastSyncTime()  
+
+       getLastSyncTime()
        syncObjects()
        touchReferenceFile()
        disconnectFromDatabase()
    }
-   
+
    private syncObjects()
    {
+       def typeList = types.split(',').collect({ it.toLowerCase() })
+
 	   if (!new File(sourceDirectory).exists())
 	   return;
 
@@ -81,21 +99,24 @@ public class OraDdlSyncMojo
        }
 
        def objects= [:]
-       
+
        for (file in scanner)
        {
            if (changedOnly&&file.lastModified()<lastSyncTime) continue;
            def object= getSourceDescriptor(file)
-           
-           if (!objects[object.type]) objects[object.type]= []
-           
-           objects[object.type] << object
+
+           if(typeList.indexOf(object.type) >= 0)
+           {
+                if (!objects[object.type]) objects[object.type]= []
+
+                objects[object.type] << object
+           }
        }
-       
-       if (!schemaUtils.sync(objects))
+
+       if (!schemaUtils.sync(objects, detectOnly, destDir))
            fail("DDL errors found")
-   } 
-   
+   }
+
    private void getLastSyncTime()
    {
        touchFile= new File(project.build.directory,".schema")
@@ -108,5 +129,5 @@ public class OraDdlSyncMojo
        ant.mkdir(dir: project.build.directory)
        ant.touch(file: touchFile.getAbsolutePath())
    }
-   
+
 }

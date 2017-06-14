@@ -57,6 +57,14 @@ public abstract class OraDdlMojo
     protected org.apache.maven.project.MavenProject project
 
     /**
+    * Specify source directory
+    * @default src/main/schema
+    * @since 1.12
+    * @parameter property="sourceDir"
+    */
+    private String sourceDir = "src/main/schema";
+
+    /**
      * Database connection helper
      */
     protected Sql sql
@@ -91,7 +99,7 @@ public abstract class OraDdlMojo
     */
     public String getSourceDirectory()
     {
-       return project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema";
+       return (sourceDir ? project.basedir.absolutePath+File.separator+sourceDir : project.basedir.absolutePath+File.separator+"src"+File.separator+"main"+File.separator+"schema");
     }
 
     public getSchemaSourceFiles()
