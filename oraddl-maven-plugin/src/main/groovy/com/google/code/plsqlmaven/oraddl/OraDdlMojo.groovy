@@ -58,9 +58,8 @@ public abstract class OraDdlMojo
 
     /**
     * Specify source directory
-    * @default src/main/schema
     * @since 1.12
-    * @parameter property="sourceDir"
+    * @parameter property="sourceDir" default-value="src/main/schema"
     */
     private String sourceDir = "src/main/schema";
 

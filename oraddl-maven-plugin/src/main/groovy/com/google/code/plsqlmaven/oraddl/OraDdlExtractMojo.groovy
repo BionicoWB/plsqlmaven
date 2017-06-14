@@ -74,7 +74,7 @@ public class OraDdlExtractMojo
    * Exclude objects that are related to objects excluded
    * like table indexes if the table is excluded
    * @since 1.11
-   * @parameter property=excludeRelated}"
+   * @parameter property="excludeRelated"
    */
    private boolean excludeRelated;
 

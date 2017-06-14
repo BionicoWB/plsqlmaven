@@ -54,9 +54,8 @@ public class OraDdlSyncMojo
 
    /**
     * Specify destination directory for synchronization's script
-    * @default src/main/schema
     * @since 1.12
-    * @parameter property="destDir"
+    * @parameter property="destDir" default-value="src/main/schema"
     */
     private String destDir = "src/main/schema";
 
@@ -64,7 +63,7 @@ public class OraDdlSyncMojo
      * A comma separated list of types of objects to sync
      * @default table,index,sequence,synonym,view,materialized view
      * @since 1.12
-     * @parameter property="types"
+     * @parameter property="types" default-value="table,index,sequence,synonym,view,materialized view"
      */
      private String types= "table,index,sequence,synonym,view,materialized view";
 

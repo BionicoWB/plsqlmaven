@@ -22,7 +22,7 @@ import com.google.code.plsqlmaven.oraddl.helpers.ExtractObjectsThread
  * Creates a directory target/remaining which contains
  * all the objects not present in the current project (and sub-modules),
  * but present in the current connection schema.
- * 
+ *
  * @goal extract-remaining
  * @since 1.9
  */
@@ -32,24 +32,24 @@ public class OraDdlExtractRemainingMojo
 
    /**
     * A comma separated list of types (table,sequence... etc) of objects to extract
-    * @parameter expression="${types}"
+    * @parameter property="types" default-value="table,index,sequence,synonym,view,materialized view"
     */
    private String types;
-   
+
   /**
    * Exclude this objects from the extraction (comma separated list of
    * Oracle regular expressions for REGEXP_LIKE operator)
    * @since 1.9
-   * @parameter expression="${exclude}"
+   * @parameter property="exclude"
    */
    private String exclude;
 
    private static firstExecute= true
    private static objects= []
-   
+
    void execute()
    {
-       if (firstExecute) 
+       if (firstExecute)
        {
 		    def targetDir= path('target/remaining/schema')
             ant.mkdir(dir: targetDir)
@@ -63,18 +63,18 @@ public class OraDdlExtractRemainingMojo
 																		 schemaUtils))
 			firstExecute= false;
        }
-       
+
        log.info project.basedir.absolutePath
        def files= getSchemaSourceFiles()
-       
+
        files.each
        {
 		   file ->
-		   
+
            objects << getSourceDescriptor(file);
        }
-       
+
        log.info 'found '+objects.size()+' objects.'
    }
-   
+
 }
